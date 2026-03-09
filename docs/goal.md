@@ -22,7 +22,7 @@ The retrieval process follows a multi-stage optimization pipeline designed to mi
 2. **[X] Feature Extraction** (Embedding Generation) - *Implemented HuggingFaceEmbedder with BAAI/bge-small-en-v1.5*
 3. **[X] Geometric Normalization** (Mean Centering) - *Implemented WhiteningNormalizer*
 4. **[X] Spectral Decorrelation** (Whitening) - *Implemented SVD-based Covariance Whitening*
-5. **[ ] Hyperbolic Mapping** (Poincaré Ball Projection)
+5. **[X] Hyperbolic Mapping** (Poincaré Ball Projection) - *Implemented PoincareProjector*
 6. **[ ] Dimensionality Reduction** (Johnson–Lindenstrauss Random Projection)
 7. **[ ] Locality-Sensitive Hashing (LSH)**
 8. **[ ] Binary Quantization**

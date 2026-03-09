@@ -3,6 +3,8 @@
 pub mod embedding;
 /// Tools for geometric normalization and whitening.
 pub mod normalization;
+/// Space projection transformations (Hyperbolic, Random).
+pub mod projection;
 pub mod routing;
 
 /// Common types used across the retrieval pipeline.

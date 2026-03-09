@@ -11,6 +11,7 @@ use tracing_subscriber::FmtSubscriber;
 
 use isosearch::embedding::{Embedder, HuggingFaceEmbedder};
 use isosearch::normalization::{Normalizer, WhiteningNormalizer};
+use isosearch::projection::{PoincareProjector, Projector};
 use isosearch::routing::{KMeansRouter, Router};
 use ndarray::Array1;
 use std::env;
@@ -81,8 +82,13 @@ async fn main() -> Result<()> {
         query_raw.clone(),
     ];
     let normalizer = WhiteningNormalizer::fit(&sample_corpus)?;
-    let query = normalizer.normalize(&query_raw);
+    let query_normalized = normalizer.normalize(&query_raw);
     info!("Applied Whitening Transformation to query vector");
+
+    // Phase 3.1: Hyperbolic Space Projection (Poincaré Ball)
+    let projector = PoincareProjector::new();
+    let query = projector.project(&query_normalized);
+    info!("Projected query vector into the Poincaré Ball (Hyperbolic Space)");
 
     let partition = router.route(&query)?;
     info!("Routed query to partition: {partition}");

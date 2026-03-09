@@ -147,12 +147,11 @@ impl HNSWGraph {
                 let vb = _mm256_loadu_si256(b.as_ptr().add(i) as *const __m256i);
                 let vxor = _mm256_xor_si256(va, vb);
                 // On x86, we don't have a 256-bit popcount, so we use 64-bit ones
-                // or specialized libraries. Here we stick to a middle ground.
-                // Extract i64 values and reinterpret as u64 for popcount
-                let x0 = _mm256_extract_epi64::<0>(vxor) as u64;
-                let x1 = _mm256_extract_epi64::<1>(vxor) as u64;
-                let x2 = _mm256_extract_epi64::<2>(vxor) as u64;
-                let x3 = _mm256_extract_epi64::<3>(vxor) as u64;
+                // Extract i64 values and transmute to u64 (preserves bit pattern without sign warnings)
+                let x0 = std::mem::transmute::<i64, u64>(_mm256_extract_epi64::<0>(vxor));
+                let x1 = std::mem::transmute::<i64, u64>(_mm256_extract_epi64::<1>(vxor));
+                let x2 = std::mem::transmute::<i64, u64>(_mm256_extract_epi64::<2>(vxor));
+                let x3 = std::mem::transmute::<i64, u64>(_mm256_extract_epi64::<3>(vxor));
                 total += x0.count_ones() + x1.count_ones() + x2.count_ones() + x3.count_ones();
             }
             i += 4;

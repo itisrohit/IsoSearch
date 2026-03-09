@@ -91,7 +91,7 @@ The compiler needs recognizable patterns to apply auto-vectorization. Manual opt
 
 ### Rayon's Defaults Are Production-Ready
 Custom work distribution strategies rarely beat Rayon's built-in scheduler:
-- Default `par_iter()`: 30% speedup over sequential
+- Default `par_iter()`: ~3.3x speedup over sequential
 - Custom chunking: 42% regression due to poor work distribution
 
 Unless profiling shows a specific bottleneck, trust Rayon's work-stealing scheduler.

@@ -1,5 +1,6 @@
 //! `isosearch` library core.
 
+pub mod embedding;
 pub mod routing;
 
 /// Common types used across the retrieval pipeline.

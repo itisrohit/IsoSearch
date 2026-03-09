@@ -9,11 +9,17 @@ use anyhow::Result;
 use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
+use isosearch::embedding::{Embedder, HuggingFaceEmbedder};
 use isosearch::routing::{KMeansRouter, Router};
 use ndarray::Array1;
+use std::env;
 
 /// Initialize the application and search pipeline.
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Load environment variables from .env file if it exists
+    dotenvy::dotenv().ok();
+
     // Setup professional logging
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
@@ -25,7 +31,8 @@ fn main() -> Result<()> {
 
     // Phase 1: Routing Network Initialization
     // Mocking 4 centroids for demonstration
-    let dim = 768;
+    // Updated to match BAAI/bge-small-en-v1.5 embedding dimensions (384)
+    let dim = 384;
     let centroids = vec![
         Array1::zeros(dim),
         Array1::ones(dim),
@@ -38,8 +45,35 @@ fn main() -> Result<()> {
         router.partition_count()
     );
 
-    // Mock Query
-    let query = Array1::from_elem(dim, 0.1);
+    let api_token = env::var("HF_TOKEN").unwrap_or_else(|_| String::new());
+
+    // Phase 2: Embedding Generation Setup
+    // Using HuggingFace's FREE inference API with BAAI BGE model
+    // This model produces 384-dimensional embeddings via the hf-inference provider
+    let embedder = HuggingFaceEmbedder::new(&api_token, "BAAI/bge-small-en-v1.5")?;
+    let mock_text = "What is approximate nearest neighbor search?";
+
+    info!("Generating embedding for query: '{}'", mock_text);
+    // Note: HuggingFace API is FREE and works without authentication (with rate limits)
+    // For better rate limits, set HF_TOKEN in your .env file from https://huggingface.co/settings/tokens
+
+    let query = match embedder.embed(mock_text).await {
+        Ok(q) => {
+            info!(
+                "✓ Received embedding from HuggingFace API [Dim: {}]",
+                q.len()
+            );
+            q
+        }
+        Err(e) => {
+            tracing::warn!(
+                "Embedding API failed: {}. Using mock embedding for routing.",
+                e
+            );
+            Array1::from_elem(dim, 0.1)
+        }
+    };
+
     let partition = router.route(&query)?;
     info!("Routed query to partition: {}", partition);
 

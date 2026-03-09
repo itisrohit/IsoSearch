@@ -2,7 +2,7 @@
 name = "isosearch"
 version = "0.1.0"
 edition = "2024"
-authors = ["IsoSearch Team"]
+authors = ["Rohit Kumar"]
 description = "A sub-millisecond approximate nearest neighbor retriever"
 repository = "https://github.com/itisrohit/IsoSearch"
 license = "MIT"

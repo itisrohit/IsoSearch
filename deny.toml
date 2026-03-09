@@ -2,25 +2,27 @@
 # See: https://embarkstudios.github.io/cargo-deny/
 
 [advisories]
-vulnerability = "deny"
 unmaintained = "all"
 yanked = "deny"
-notice = "warn"
 ignore = [
     "RUSTSEC-2025-0141", # Bincode unmaintained - acknowledged for initial setup
     "RUSTSEC-2024-0436", # Paste unmaintained (transitive dependency of tract)
 ]
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
     "BSD-3-Clause",
+    "BSD-2-Clause",
     "ISC",
+    "MPL-2.0",
+    "Zlib",
+    "Unlicense",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "CDLA-Permissive-2.0",
 ]
-copyleft = "deny"
-allow-osi-fsf-free = "both"
 
 [bans]
 multiple-versions = "warn"

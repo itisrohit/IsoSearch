@@ -141,8 +141,16 @@ Every technical stage defined in the **Architectural Pipeline Overview** (Steps 
 
 For the initial hardware micro-benchmarks regarding execution latency and $O(1)/O(\log N)$ scalability observations compared to traditional "General RAG" systems, please consult the [Technical Analysis & Benchmarks](./technical_analysis.md) report.
 
-### Remaining Testing & Future Optimization
+### Current Focus: Phase 5 — Recall Evaluation & Accuracy Tuning
+We are currently shifting focus from pure systems optimization to **mathematical verification**. The goal is to prove that our aggressively quantized Hamming search maintains high semantic fidelity.
 
-1. **Recall Fidelity (Accuracy Tradeoffs)**: Measure exact search accuracy (Recall@10) relative to a brittle absolute Euclidean baseline using actual MS MARCO or SQuAD datasets.
-2. **System Partitioning (K-Means Refinement):** Scale the routing network to handle a much larger number of shards for multi-million document benchmarks.
-3. **Cache-Hitting Optimizations:** Transition the object-oriented graph nodes in `HNSWGraph` into tightly packed memory arenas (Struct of Arrays) to perfectly align CPU L1 caching during traversal.
+1.  **Recall Fidelity (Accuracy Tradeoffs)**:
+    *   **Task**: Integrate a real-world benchmark dataset (e.g., **MS MARCO** or **SQuAD**) using the `HuggingFaceEmbedder`.
+    *   **Metric**: Calculate **Recall@10** and **Recall@100** by comparing IsoSearch results against an exact Euclidean baseline.
+    *   **Tuning**: Optimize Poincaré Ball scaling factors and LSH hyperplane counts to find the "Sweet Spot" between speed reduction and retrieval accuracy.
+
+### Remaining Future Roadmap
+
+1.  **System Partitioning (K-Means Refinement):** Scale the routing network to handle a much larger number of shards for multi-million document benchmarks.
+2.  **Cache-Hitting Optimizations (Struct of Arrays):** Transition the object-oriented graph nodes in `HNSWGraph` into a tightly packed memory arena to align CPU L1 caching during traversal.
+3.  **Production CLI/API**: Build a lightweight ingestion interface to allow external users to index and search their own document collections.

@@ -1,6 +1,8 @@
 //! `isosearch` library core.
 
 pub mod embedding;
+/// HNSW Graph structures and search.
+pub mod graph;
 /// Locality-Sensitive Hashing (LSH) and binary quantization.
 pub mod hashing;
 /// Bucket-based candidate indexing and intersection.

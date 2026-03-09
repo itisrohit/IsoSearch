@@ -44,6 +44,47 @@ impl BucketIndex {
     }
 }
 
+/// A primary storage for full-precision embeddings used for rescoring.
+#[derive(Debug, Clone, Default)]
+pub struct VectorStore {
+    /// Maps document ID to its full embedding vector.
+    pub storage: HashMap<ID, crate::types::Embedding>,
+}
+
+impl VectorStore {
+    /// Creates a new, empty `VectorStore`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Inserts an embedding into the store.
+    pub fn insert(&mut self, id: ID, embedding: crate::types::Embedding) {
+        self.storage.insert(id, embedding);
+    }
+
+    /// Calculates exact Euclidean distances for a set of candidates.
+    ///
+    /// # Returns
+    /// A sorted list of (ID, distance) from nearest to farthest.
+    #[must_use]
+    pub fn rescore(&self, query: &crate::types::Embedding, candidates: &[ID]) -> Vec<(ID, f32)> {
+        let mut scored: Vec<(ID, f32)> = candidates
+            .iter()
+            .filter_map(|id| {
+                self.storage.get(id).map(|vec| {
+                    let diff = query - vec;
+                    let dist_sq = diff.dot(&diff);
+                    (*id, dist_sq)
+                })
+            })
+            .collect();
+
+        scored.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        scored
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

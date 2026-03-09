@@ -27,8 +27,8 @@ The retrieval process follows a multi-stage optimization pipeline designed to mi
 7. **[X] Locality-Sensitive Hashing (LSH)** - *Implemented SimHasher (SimHash)*
 8. **[X] Binary Quantization** - *Implemented BinaryQuantizer (u64 packing)*
 9. **[X] Bucket Intersection** - *Implemented BucketIndex for candidate retrieval*
-10. **[ ] HNSW Graph Traversal** (Hamming Space Search)
-11. **[ ] Precision Rescoring** (Full Vector Reranking)
+10. **[X] HNSW Graph Traversal** (Hamming Space Search) - *Implemented HNSWGraph (greedy search)*
+11. **[X] Precision Rescoring** (Full Vector Reranking) - *Implemented VectorStore rescoring*
 
 ---
 

@@ -10,16 +10,19 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 use isosearch::embedding::{Embedder, HuggingFaceEmbedder};
+use isosearch::graph::{HNSWGraph, Node};
 use isosearch::hashing::{BinaryQuantizer, LocalitySensitiveHasher, Quantizer, SimHasher};
-use isosearch::indexing::BucketIndex;
+use isosearch::indexing::{BucketIndex, VectorStore};
 use isosearch::normalization::{Normalizer, WhiteningNormalizer};
 use isosearch::projection::{PoincareProjector, Projector, RandomProjector};
 use isosearch::routing::{KMeansRouter, Router};
+use isosearch::types::ID;
 use ndarray::Array1;
 use std::env;
 
 /// Initialize the application and search pipeline.
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<()> {
     // Load environment variables from .env file if it exists
     dotenvy::dotenv().ok();
@@ -130,8 +133,42 @@ async fn main() -> Result<()> {
         "Bucket Intersection found {} candidate documents",
         candidates.len()
     );
-    if !candidates.is_empty() {
-        info!("Top match candidate ID: {:?}", candidates[0]);
+
+    // Phase 8: HNSW Graph Traversal (Step 10)
+    // We populate a small graph with our candidate for navigation
+    let mut graph = HNSWGraph::new();
+    for &id in &candidates {
+        graph.nodes.insert(
+            id,
+            Node {
+                id,
+                hash: quantized_codes.clone(),
+                neighbors: vec![vec![]],
+            },
+        );
+    }
+    graph.entry_point = candidates.first().copied();
+
+    let graph_candidates = graph.search(&quantized_codes, 10);
+    info!(
+        "HNSW Traversal found {} candidates in Hamming Space",
+        graph_candidates.len()
+    );
+
+    // Phase 9: Precision Rescoring (Step 11)
+    let mut store = VectorStore::new();
+    for &id in &candidates {
+        store.insert(id, query.clone()); // Simulating the original vector storage
+    }
+
+    let candidate_ids: Vec<ID> = graph_candidates.iter().map(|(id, _)| *id).collect();
+    let rescored = store.rescore(&query, &candidate_ids);
+
+    if let Some((best_id, score)) = rescored.first() {
+        info!(
+            "✓ Pipeline Complete. Best Match: ID={:?}, Exact Distance={:.6}",
+            best_id, score
+        );
     }
 
     let partition = router.route(&query)?;

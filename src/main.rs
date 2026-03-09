@@ -11,7 +11,7 @@ use tracing_subscriber::FmtSubscriber;
 
 use isosearch::embedding::{Embedder, HuggingFaceEmbedder};
 use isosearch::normalization::{Normalizer, WhiteningNormalizer};
-use isosearch::projection::{PoincareProjector, Projector};
+use isosearch::projection::{PoincareProjector, Projector, RandomProjector};
 use isosearch::routing::{KMeansRouter, Router};
 use ndarray::Array1;
 use std::env;
@@ -33,13 +33,18 @@ async fn main() -> Result<()> {
 
     // Phase 1: Routing Network Initialization
     // Mocking 4 centroids for demonstration
-    // Updated to match BAAI/bge-small-en-v1.5 embedding dimensions (384)
-    let dim = 384;
+    // Phase 1: Partition Routing (Search Space Reduction)
+    // For simulation, we create 4 dummy centroids
+    // We must ensure centroids have the SAME dimension as the query when routing
+    let dim = 384; // Updated to match BAAI/bge-small-en-v1.5 embedding dimensions (384)
+    let target_dim = 128;
+    let rp = RandomProjector::new_gaussian(dim, target_dim);
+
     let centroids = vec![
-        Array1::zeros(dim),
-        Array1::ones(dim),
-        Array1::from_elem(dim, 0.5),
-        Array1::from_elem(dim, -0.5),
+        rp.project(&Array1::from_elem(dim, 0.1)),
+        rp.project(&Array1::from_elem(dim, -0.1)),
+        rp.project(&Array1::from_elem(dim, 0.2)),
+        rp.project(&Array1::from_elem(dim, -0.2)),
     ];
     let router = KMeansRouter::new(centroids);
     info!(
@@ -87,8 +92,18 @@ async fn main() -> Result<()> {
 
     // Phase 3.1: Hyperbolic Space Projection (Poincaré Ball)
     let projector = PoincareProjector::new();
-    let query = projector.project(&query_normalized);
+    let query_hyperbolic = projector.project(&query_normalized);
     info!("Projected query vector into the Poincaré Ball (Hyperbolic Space)");
+
+    // Phase 4: Dimensionality Reduction (JL Random Projection)
+    // Reduce from 384D to 128D
+    let rp = RandomProjector::new_gaussian(dim, 128);
+    let query = rp.project(&query_hyperbolic);
+    info!(
+        "Reduced dimensionality from {} to {} via Random Projection",
+        dim,
+        query.len()
+    );
 
     let partition = router.route(&query)?;
     info!("Routed query to partition: {partition}");

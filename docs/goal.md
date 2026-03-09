@@ -23,7 +23,7 @@ The retrieval process follows a multi-stage optimization pipeline designed to mi
 3. **[X] Geometric Normalization** (Mean Centering) - *Implemented WhiteningNormalizer*
 4. **[X] Spectral Decorrelation** (Whitening) - *Implemented SVD-based Covariance Whitening*
 5. **[X] Hyperbolic Mapping** (Poincaré Ball Projection) - *Implemented PoincareProjector*
-6. **[ ] Dimensionality Reduction** (Johnson–Lindenstrauss Random Projection)
+6. **[X] Dimensionality Reduction** (Johnson–Lindenstrauss Random Projection) - *Implemented RandomProjector*
 7. **[ ] Locality-Sensitive Hashing (LSH)**
 8. **[ ] Binary Quantization**
 9. **[ ] Bucket Intersection**

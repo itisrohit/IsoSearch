@@ -41,6 +41,47 @@ impl Projector for PoincareProjector {
     }
 }
 
+/// A projector that reduces dimensionality using the Johnson-Lindenstrauss lemma.
+/// It utilizes a random Gaussian matrix to preserve pairwise distances.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RandomProjector {
+    /// The projection matrix of shape (`target_dim`, `source_dim`).
+    pub matrix: ndarray::Array2<f32>,
+}
+
+impl RandomProjector {
+    /// Creates a new `RandomProjector` with a Gaussian random matrix.
+    ///
+    /// # Arguments
+    /// * `source_dim` - Original dimensionality.
+    /// * `target_dim` - Target dimensionality.
+    ///
+    /// # Panics
+    /// Panics if the internal Gaussian distribution parameters are invalid.
+    #[must_use]
+    pub fn new_gaussian(source_dim: usize, target_dim: usize) -> Self {
+        use rand::distributions::Distribution;
+        use rand_distr::Normal;
+
+        let mut rng = rand::thread_rng();
+        // JL Projection scale: 1/sqrt(target_dim)
+        #[allow(clippy::cast_precision_loss)]
+        let std_dev = 1.0 / (target_dim as f32).sqrt();
+        let dist = Normal::new(0.0, std_dev).unwrap();
+
+        let matrix =
+            ndarray::Array2::from_shape_fn((target_dim, source_dim), |_| dist.sample(&mut rng));
+
+        Self { matrix }
+    }
+}
+
+impl Projector for RandomProjector {
+    fn project(&self, vector: &Embedding) -> Embedding {
+        self.matrix.dot(vector)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,5 +119,42 @@ mod tests {
         assert!((projected[0] - 1.0f32.tanh()).abs() < 1e-6);
         assert!(projected[1].abs() < 1e-6);
         assert!(projected[2].abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_random_projection_dimensions() {
+        let source_dim = 10;
+        let target_dim = 3;
+        let projector = RandomProjector::new_gaussian(source_dim, target_dim);
+
+        let v = Array1::zeros(source_dim);
+        let projected = projector.project(&v);
+
+        assert_eq!(projected.len(), target_dim);
+    }
+
+    #[test]
+    fn test_random_projection_jl_distance_preservation() {
+        // Simple test to check if distance is roughly preserved
+        let source_dim = 100;
+        let target_dim = 50;
+        let projector = RandomProjector::new_gaussian(source_dim, target_dim);
+
+        let v1 = Array1::from_elem(source_dim, 1.0);
+        let v2 = Array1::from_elem(source_dim, 0.0);
+
+        let diff_orig = &v1 - &v2;
+        let dist_orig_sq = diff_orig.dot(&diff_orig);
+
+        let p1 = projector.project(&v1);
+        let p2 = projector.project(&v2);
+
+        let diff_proj = &p1 - &p2;
+        let dist_proj_sq = diff_proj.dot(&diff_proj);
+
+        // JL lemma guarantees (1-eps)d < d_proj < (1+eps)d
+        // With 100->50, we expect some variance but it should be "close"
+        let ratio = dist_proj_sq / dist_orig_sq;
+        assert!(ratio > 0.5 && ratio < 1.5);
     }
 }

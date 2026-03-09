@@ -26,9 +26,10 @@ The core engine is implemented in Rust (2024 Edition) and requires a linear alge
 
 The project maintains high code quality and security standards through automated checks.
 
-### Continuous Integration
+### Quality Protection
 
-*   **Linting**: Strict enforcement via Clippy (Pedantic and Nursery profiles).
+*   **Git Hooks**: Managed by Lefthook. Automatically runs formatting, linting, and tests on every commit to prevent poor-quality code from entering the history.
+*   **Continuous Integration**: Automated gates on every PR using GitHub Actions.
 *   **Security**: Automated dependency auditing via `cargo-audit`.
 *   **Compliance**: License monitoring through `cargo-deny`.
 

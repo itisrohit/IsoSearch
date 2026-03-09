@@ -1,0 +1,20 @@
+# Lefthook Configuration (2026 Edition)
+# High-performance Git hooks manager
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    fmt:
+      glob: "*.rs"
+      run: cargo fmt --all -- --check
+    clippy:
+      glob: "*.rs"
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    test:
+      glob: "*.rs"
+      run: cargo test --all-features -- --quiet
+    deny:
+      files: git diff --name-only --staged
+      glob: "Cargo.toml"
+      run: cargo deny check

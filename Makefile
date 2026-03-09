@@ -30,4 +30,5 @@ clean:
 # Install recommended tools
 setup:
 	rustup component add clippy rustfmt
-	cargo install cargo-audit cargo-watch bacon
+	cargo install cargo-audit cargo-watch bacon lefthook
+	lefthook install

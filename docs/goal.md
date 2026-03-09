@@ -19,16 +19,16 @@ The primary objective is the development of a **sub-millisecond approximate near
 The retrieval process follows a multi-stage optimization pipeline designed to minimize computational complexity at each successive step:
 
 1. **[X] Routing Network/Partitioning** (Search Space Reduction) - *Implemented KMeansRouter*
-2. **Feature Extraction** (Embedding Generation)
-3. **Geometric Normalization** (Mean Centering)
-4. **Spectral Decorrelation** (Whitening)
-5. **Hyperbolic Mapping** (Poincaré Ball Projection)
-6. **Dimensionality Reduction** (Johnson–Lindenstrauss Random Projection)
-7. **Locality-Sensitive Hashing (LSH)**
-8. **Binary Quantization**
-9. **Bucket Intersection**
-10. **HNSW Graph Traversal** (Hamming Space Search)
-11. **Precision Rescoring** (Full Vector Reranking)
+2. **[X] Feature Extraction** (Embedding Generation) - *Implemented HuggingFaceEmbedder with BAAI/bge-small-en-v1.5*
+3. **[ ] Geometric Normalization** (Mean Centering)
+4. **[ ] Spectral Decorrelation** (Whitening)
+5. **[ ] Hyperbolic Mapping** (Poincaré Ball Projection)
+6. **[ ] Dimensionality Reduction** (Johnson–Lindenstrauss Random Projection)
+7. **[ ] Locality-Sensitive Hashing (LSH)**
+8. **[ ] Binary Quantization**
+9. **[ ] Bucket Intersection**
+10. **[ ] HNSW Graph Traversal** (Hamming Space Search)
+11. **[ ] Precision Rescoring** (Full Vector Reranking)
 
 ---
 
@@ -39,7 +39,10 @@ To reduce the initial search space from $O(N)$ to $O(N/k)$, a lightweight routin
 * **Latency Overhead:** ~0.1 ms.
 
 ### 2. Semantic Embedding Generation
-High-dimensional semantic vectors (e.g., 768-dim) are generated using optimized models such as BGE-Small, MiniLM, or custom ONNX-exported transformer architectures.
+High-dimensional semantic vectors (384D) are generated using the **HuggingFace Inference API** with the `BAAI/bge-small-en-v1.5` model. This provides free, serverless embedding generation without requiring local GPU compute.
+* **Implementation:** `HuggingFaceEmbedder` struct with authentication via `HF_TOKEN`
+* **Endpoint:** `https://router.huggingface.co/hf-inference/models/{model_id}`
+* **Embedding Dimension:** 384D (optimized for efficiency)
 
 ### 3. Geometric Normalization (Mean Centering)
 Elimination of global bias to ensure the embedding distribution is centered around the origin.
@@ -111,7 +114,7 @@ The system will be implemented natively in **Rust** to leverage its strict memor
 | **Core Engine** | Pure Rust with SIMD (AVX-512/NEON) intrinsics for vector math |
 | **Linear Algebra** | `ndarray` with `ndarray-linalg` (OpenBLAS/LAPACK backend) |
 | **Graph Indexing** | Native Rust HNSW implementation (optimizing for cache locality) |
-| **Inference Engine** | `tract` for native Rust transformer inference or `onnxruntime-rs` |
+| **Inference Engine** | API-based client (`reqwest`, `tokio`) connecting to HuggingFace Inference API |
 | **Concurrency** | `Rayon` for parallel index building and search space traversal |
 | **Transformation Kernels** | Optimized Rust SIMD kernels for Whitening and Poincaré mapping |
 | **Serialization** | `serde` and `bincode` for high-speed, zero-copy index persistence |

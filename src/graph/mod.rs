@@ -133,6 +133,7 @@ impl HNSWGraph {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     #[inline]
+    #[allow(clippy::cast_sign_loss)] // i64 to u64 cast is safe for bit operations
     pub unsafe fn hamming_distance_avx2(a: &[u64], b: &[u64]) -> u32 {
         use std::arch::x86_64::{
             __m256i, _mm256_extract_epi64, _mm256_loadu_si256, _mm256_xor_si256,
@@ -148,14 +149,11 @@ impl HNSWGraph {
                 let vxor = _mm256_xor_si256(va, vb);
                 // On x86, we don't have a 256-bit popcount, so we use 64-bit ones
                 // Cast i64 to unsigned for popcount (wrapping cast preserves bit pattern)
-                #[allow(clippy::cast_sign_loss)]
-                {
-                    let x0 = _mm256_extract_epi64::<0>(vxor) as u64;
-                    let x1 = _mm256_extract_epi64::<1>(vxor) as u64;
-                    let x2 = _mm256_extract_epi64::<2>(vxor) as u64;
-                    let x3 = _mm256_extract_epi64::<3>(vxor) as u64;
-                    total += x0.count_ones() + x1.count_ones() + x2.count_ones() + x3.count_ones();
-                }
+                let x0 = _mm256_extract_epi64::<0>(vxor) as u64;
+                let x1 = _mm256_extract_epi64::<1>(vxor) as u64;
+                let x2 = _mm256_extract_epi64::<2>(vxor) as u64;
+                let x3 = _mm256_extract_epi64::<3>(vxor) as u64;
+                total += x0.count_ones() + x1.count_ones() + x2.count_ones() + x3.count_ones();
             }
             i += 4;
         }

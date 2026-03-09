@@ -10,6 +10,7 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 use isosearch::embedding::{Embedder, HuggingFaceEmbedder};
+use isosearch::hashing::{LocalitySensitiveHasher, SimHasher};
 use isosearch::normalization::{Normalizer, WhiteningNormalizer};
 use isosearch::projection::{PoincareProjector, Projector, RandomProjector};
 use isosearch::routing::{KMeansRouter, Router};
@@ -104,6 +105,12 @@ async fn main() -> Result<()> {
         dim,
         query.len()
     );
+
+    // Phase 5: Locality-Sensitive Hashing (LSH)
+    // Generate a 64-bit binary fingerprint for fast Hamming space comparison
+    let hasher = SimHasher::new(query.len(), 64);
+    let fingerprint = hasher.hash(&query);
+    info!("Generated 64-bit LSH Fingerprint: {:b}", fingerprint);
 
     let partition = router.route(&query)?;
     info!("Routed query to partition: {partition}");

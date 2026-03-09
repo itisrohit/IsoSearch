@@ -1,6 +1,8 @@
 //! `isosearch` library core.
 
 pub mod embedding;
+/// Locality-Sensitive Hashing (LSH) and binary quantization.
+pub mod hashing;
 /// Tools for geometric normalization and whitening.
 pub mod normalization;
 /// Space projection transformations (Hyperbolic, Random).

@@ -64,6 +64,35 @@ impl LocalitySensitiveHasher for SimHasher {
     }
 }
 
+/// Interface for vector quantization.
+pub trait Quantizer {
+    /// Compresses a high-dimensional hash into a compact binary representation.
+    fn quantize(&self, hash: &Hash) -> Vec<u64>;
+}
+
+/// A quantizer that packs bits into 64-bit unsigned integers.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct BinaryQuantizer;
+
+impl BinaryQuantizer {
+    /// Creates a new `BinaryQuantizer`.
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
+    }
+}
+
+impl Quantizer for BinaryQuantizer {
+    fn quantize(&self, hash: &Hash) -> Vec<u64> {
+        // BitVec already stores data in chunks, but we want
+        // a clean Vec<u64> for our index.
+        hash.as_raw_slice()
+            .iter()
+            .map(|&byte| u64::from(byte))
+            .collect::<Vec<u64>>()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

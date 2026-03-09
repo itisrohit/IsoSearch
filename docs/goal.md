@@ -25,8 +25,8 @@ The retrieval process follows a multi-stage optimization pipeline designed to mi
 5. **[X] Hyperbolic Mapping** (Poincaré Ball Projection) - *Implemented PoincareProjector*
 6. **[X] Dimensionality Reduction** (Johnson–Lindenstrauss Random Projection) - *Implemented RandomProjector*
 7. **[X] Locality-Sensitive Hashing (LSH)** - *Implemented SimHasher (SimHash)*
-8. **[ ] Binary Quantization**
-9. **[ ] Bucket Intersection**
+8. **[X] Binary Quantization** - *Implemented BinaryQuantizer (u64 packing)*
+9. **[X] Bucket Intersection** - *Implemented BucketIndex for candidate retrieval*
 10. **[ ] HNSW Graph Traversal** (Hamming Space Search)
 11. **[ ] Precision Rescoring** (Full Vector Reranking)
 

@@ -10,7 +10,8 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 use isosearch::embedding::{Embedder, HuggingFaceEmbedder};
-use isosearch::hashing::{LocalitySensitiveHasher, SimHasher};
+use isosearch::hashing::{BinaryQuantizer, LocalitySensitiveHasher, Quantizer, SimHasher};
+use isosearch::indexing::BucketIndex;
 use isosearch::normalization::{Normalizer, WhiteningNormalizer};
 use isosearch::projection::{PoincareProjector, Projector, RandomProjector};
 use isosearch::routing::{KMeansRouter, Router};
@@ -111,6 +112,27 @@ async fn main() -> Result<()> {
     let hasher = SimHasher::new(query.len(), 64);
     let fingerprint = hasher.hash(&query);
     info!("Generated 64-bit LSH Fingerprint: {:b}", fingerprint);
+
+    // Phase 6: Binary Quantization (Step 8)
+    let quantizer = BinaryQuantizer::new();
+    let quantized_codes = quantizer.quantize(&fingerprint);
+    info!("Quantized Fingerprint into {} words", quantized_codes.len());
+
+    // Phase 7: Bucket Intersection (Step 9)
+    // We simulate a search index by inserting the query hash as document #42
+    let mut index = BucketIndex::new();
+    if let Some(&primary_hash) = quantized_codes.first() {
+        index.insert(primary_hash, 42);
+    }
+
+    let candidates = index.intersect(&quantized_codes);
+    info!(
+        "Bucket Intersection found {} candidate documents",
+        candidates.len()
+    );
+    if !candidates.is_empty() {
+        info!("Top match candidate ID: {:?}", candidates[0]);
+    }
 
     let partition = router.route(&query)?;
     info!("Routed query to partition: {partition}");

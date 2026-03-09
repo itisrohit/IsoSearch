@@ -9,6 +9,9 @@ use anyhow::Result;
 use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
+use isosearch::routing::{KMeansRouter, Router};
+use ndarray::Array1;
+
 /// Initialize the application and search pipeline.
 fn main() -> Result<()> {
     // Setup professional logging
@@ -20,7 +23,25 @@ fn main() -> Result<()> {
     info!("Initializing IsoSearch Engine (2026 Edition)");
     info!("Target Specification: Sub-millisecond latency, <1GB Index");
 
-    // TODO: Implement Step 1 - Routing Network
+    // Phase 1: Routing Network Initialization
+    // Mocking 4 centroids for demonstration
+    let dim = 768;
+    let centroids = vec![
+        Array1::zeros(dim),
+        Array1::ones(dim),
+        Array1::from_elem(dim, 0.5),
+        Array1::from_elem(dim, -0.5),
+    ];
+    let router = KMeansRouter::new(centroids);
+    info!(
+        "Initialized Routing Network with {} partitions",
+        router.partition_count()
+    );
+
+    // Mock Query
+    let query = Array1::from_elem(dim, 0.1);
+    let partition = router.route(&query)?;
+    info!("Routed query to partition: {}", partition);
 
     Ok(())
 }

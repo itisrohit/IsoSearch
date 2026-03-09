@@ -1,0 +1,45 @@
+# --- Rust ---
+/target
+/Cargo.lock
+# (Keep Cargo.lock for binary projects, but ignore if building a library. 
+# For IsoSearch, we usually keep it if it's an application.)
+
+# --- OS Specific ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- IDEs/Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+
+# --- Data & Artifacts ---
+# Vector indices and large binary data
+/data/
+/indices/
+*.bin
+*.onnx
+*.pkl
+*.npy
+
+# --- Environment & Secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- Logs & Temp ---
+*.log
+/tmp/
+/temp/

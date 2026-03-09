@@ -113,7 +113,7 @@ impl HNSWGraph {
         total
     }
 
-    /// Optimized batch Hamming distance using AVX2 for x86_64 systems.
+    /// Optimized batch Hamming distance using AVX2 for `x86_64` systems.
     ///
     /// Uses AVX2 intrinsics to process 256-bit chunks (4 u64 values) in parallel,
     /// providing significant performance improvements over scalar code.
@@ -134,6 +134,7 @@ impl HNSWGraph {
     #[target_feature(enable = "avx2")]
     #[inline]
     #[allow(clippy::cast_sign_loss)] // i64 to u64 cast is safe for bit operations
+    #[allow(clippy::cast_ptr_alignment)] // _mm256_loadu_si256 handles unaligned loads
     pub unsafe fn hamming_distance_avx2(a: &[u64], b: &[u64]) -> u32 {
         use std::arch::x86_64::{
             __m256i, _mm256_extract_epi64, _mm256_loadu_si256, _mm256_xor_si256,

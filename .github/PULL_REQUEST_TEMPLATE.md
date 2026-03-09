@@ -2,34 +2,38 @@
 <!-- Provide a clear and concise description of the changes in this PR. -->
 
 ## Type of Change
-- [ ] 🚀 Performance Optimization (SIMD, Concurrency, etc.)
-- [ ] ✨ New Feature
-- [ ] 🐛 Bug Fix
-- [ ] 📝 Documentation Update
-- [ ] 🔧 Refactoring
+- [ ] Core Retrieval Engine (SIMD, Cache-Locality, Graph Logic)
+- [ ] Research & Benchmarking (Dataset validation, metrics, recall curves)
+- [ ] Infrastructure & Tooling (CLI, Data Loaders, CI/CD)
+- [ ] Documentation (Technical writing, tutorials, guides)
+- [ ] Bug Fix
 
-## Performance Benchmarks (Mandatory for core changes)
-### **Hardware / Environment**
+## Performance & Research Metrics
+<!-- Mandatory for Core Engine and Research contributions -->
+
+### Hardware / Environment
 - **OS**: [e.g. macOS, Linux, Windows]
-- **CPU**: [e.g. M1 Silicon, Intel i7-12700K]
+- **CPU**: [e.g. M1 Silicon, AMD Ryzen 9]
 - **Arch**: [e.g. ARM64, x86_64]
 
-### **Comparison**
+### Results Comparison
 <!-- 
-If this PR affects retrieval performance, please provide Criterion benchmark results.
+If this PR affects retrieval performance or accuracy, provide results here.
 Example: 
-- Before: 938.6 µs
-- After: 370.1 µs (~2.5x speedup)
+- Recall@10 (Euclidean): 98.2%
+- Recall@10 (IsoSearch): 95.8%
+- Latency (Flat): 938 µs
+- Latency (IsoSearch): 370 µs
 -->
 
 ## Testing & Validation
 - [ ] `make check` passes locally (Formatting, Clippy, Tests)
-- [ ] I have added new **Unit Tests** to verify the logic
-- [ ] I have added/updated **Benchmarks** (under `benches/`) to measure performance impact
-- [ ] I have verified the changes on the hardware specified above
+- [ ] New unit tests added to verify logic
+- [ ] New/Updated benchmarks added under `benches/`
+- [ ] Verified on specified hardware
 
 ## Checklist
-- [ ] My code follows the Rust standard formatting (`rustfmt`)
-- [ ] I have ran `clippy` and it has no warnings (`-D warnings`)
-- [ ] I have updated the documentation (`README.md`, `docs/*.md`) where necessary
-- [ ] Commit messages follow the Conventional Commit pattern (`feat:`, `fix:`, `perf:`, etc.)
+- [ ] Code follows `rustfmt` standard
+- [ ] Clippy has no warnings (`-D warnings`)
+- [ ] Documentation (`README.md`, `docs/*.md`) updated
+- [ ] Commit messages follow Conventional Commit pattern (`feat:`, `fix:`, `perf:`, `bench:`, etc.)

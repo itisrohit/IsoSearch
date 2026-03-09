@@ -1,6 +1,8 @@
 //! `isosearch` library core.
 
 pub mod embedding;
+/// Tools for geometric normalization and whitening.
+pub mod normalization;
 pub mod routing;
 
 /// Common types used across the retrieval pipeline.

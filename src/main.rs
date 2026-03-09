@@ -10,6 +10,7 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 use isosearch::embedding::{Embedder, HuggingFaceEmbedder};
+use isosearch::normalization::{Normalizer, WhiteningNormalizer};
 use isosearch::routing::{KMeansRouter, Router};
 use ndarray::Array1;
 use std::env;
@@ -45,19 +46,17 @@ async fn main() -> Result<()> {
         router.partition_count()
     );
 
+    // Phase 2: Embedding Generation Setup
     let api_token = env::var("HF_TOKEN").unwrap_or_else(|_| String::new());
 
-    // Phase 2: Embedding Generation Setup
     // Using HuggingFace's FREE inference API with BAAI BGE model
     // This model produces 384-dimensional embeddings via the hf-inference provider
     let embedder = HuggingFaceEmbedder::new(&api_token, "BAAI/bge-small-en-v1.5")?;
     let mock_text = "What is approximate nearest neighbor search?";
 
     info!("Generating embedding for query: '{}'", mock_text);
-    // Note: HuggingFace API is FREE and works without authentication (with rate limits)
-    // For better rate limits, set HF_TOKEN in your .env file from https://huggingface.co/settings/tokens
 
-    let query = match embedder.embed(mock_text).await {
+    let query_raw = match embedder.embed(mock_text).await {
         Ok(q) => {
             info!(
                 "✓ Received embedding from HuggingFace API [Dim: {}]",
@@ -66,16 +65,27 @@ async fn main() -> Result<()> {
             q
         }
         Err(e) => {
-            tracing::warn!(
-                "Embedding API failed: {}. Using mock embedding for routing.",
-                e
-            );
+            tracing::warn!("Embedding API failed: {e}. Using mock embedding for routing.");
             Array1::from_elem(dim, 0.1)
         }
     };
 
+    // Phase 3: Geometric Normalization & Whitening
+    // In a production system, the normalizer would be fitted on the entire indexed corpus.
+    // For this demonstration, we "fit" it on a small sample to show the mechanics.
+    let sample_corpus = vec![
+        Array1::zeros(dim),
+        Array1::ones(dim),
+        Array1::from_elem(dim, 0.2),
+        Array1::from_elem(dim, -0.2),
+        query_raw.clone(),
+    ];
+    let normalizer = WhiteningNormalizer::fit(&sample_corpus)?;
+    let query = normalizer.normalize(&query_raw);
+    info!("Applied Whitening Transformation to query vector");
+
     let partition = router.route(&query)?;
-    info!("Routed query to partition: {}", partition);
+    info!("Routed query to partition: {partition}");
 
     Ok(())
 }

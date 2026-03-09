@@ -20,8 +20,8 @@ The retrieval process follows a multi-stage optimization pipeline designed to mi
 
 1. **[X] Routing Network/Partitioning** (Search Space Reduction) - *Implemented KMeansRouter*
 2. **[X] Feature Extraction** (Embedding Generation) - *Implemented HuggingFaceEmbedder with BAAI/bge-small-en-v1.5*
-3. **[ ] Geometric Normalization** (Mean Centering)
-4. **[ ] Spectral Decorrelation** (Whitening)
+3. **[X] Geometric Normalization** (Mean Centering) - *Implemented WhiteningNormalizer*
+4. **[X] Spectral Decorrelation** (Whitening) - *Implemented SVD-based Covariance Whitening*
 5. **[ ] Hyperbolic Mapping** (Poincaré Ball Projection)
 6. **[ ] Dimensionality Reduction** (Johnson–Lindenstrauss Random Projection)
 7. **[ ] Locality-Sensitive Hashing (LSH)**

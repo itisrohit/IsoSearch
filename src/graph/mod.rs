@@ -144,8 +144,8 @@ impl HNSWGraph {
 
         while i + 3 < len {
             unsafe {
-                let va = _mm256_loadu_si256(a.as_ptr().add(i) as *const __m256i);
-                let vb = _mm256_loadu_si256(b.as_ptr().add(i) as *const __m256i);
+                let va = _mm256_loadu_si256(a.as_ptr().add(i).cast::<__m256i>());
+                let vb = _mm256_loadu_si256(b.as_ptr().add(i).cast::<__m256i>());
                 let vxor = _mm256_xor_si256(va, vb);
                 // On x86, we don't have a 256-bit popcount, so we use 64-bit ones
                 // Cast i64 to unsigned for popcount (wrapping cast preserves bit pattern)

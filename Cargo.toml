@@ -57,3 +57,7 @@ perf = { level = "warn", priority = -1 }
 [[bench]]
 name = "retrieval"
 harness = false
+
+[[bench]]
+name = "experiments"
+harness = false

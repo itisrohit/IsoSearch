@@ -1,44 +1,91 @@
 # IsoSearch
 
-IsoSearch is a sub-millisecond approximate nearest neighbor (ANN) retriever designed for large-scale document search (1M to 50M documents). It is optimized for minimal memory consumption, targeting an index footprint of less than 1 GB.
+[![Rust 2024](https://img.shields.io/badge/Rust-2024-f34f29.svg?logo=rust)](https://www.rust-lang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Experimental](https://img.shields.io/badge/Status-Experimental-yellow.svg)](#)
 
-## Requirements
+> **⚠️ Experimental Status**: IsoSearch is an active research and development project. The architecture, pipelines, and benchmarks are currently experimental. It should not be used in critical production environments yet.
 
-The core engine is implemented in Rust (2024 Edition) and requires a linear algebra backend.
+**IsoSearch** is a high-performance vector search engine designed to explore extreme optimizations in approximate nearest neighbor (ANN) retrieval. By mapping dense semantic embeddings into aggressively quantized bitspaces, IsoSearch aims to maximize retrieval speed and minimize memory footprint.
 
-### System Dependencies
+---
 
-*   **macOS**: `brew install openblas`
-*   **Linux (Ubuntu/Debian)**: `sudo apt-get install libopenblas-dev gfortran`
+## Features
 
-## Installation and Setup
+- **Quantized Hashing**: Projects 384D semantic embeddings into compact 64-bit binary fingerprints via Locality-Sensitive Hashing (SimHash).
+- **Hamming Space Traversals**: Executes nearest-neighbor searches iteratively using highly optimized Bitwise XOR popcount operations.
+- **Bucket-based Indexing**: Sidesteps linear indexing traps via constant-time $O(1)$ Hash Table intersections.
+- **Non-Euclidean Reductions**: Leverages Hyperbolic Poincaré Ball projection to enforce structural compression of vector distributions.
+- **CPU Native**: Optimized extensively for commodity hardware—no GPUs are strictly required.
 
-1.  Initialize the development environment:
-    ```bash
-    make setup
-    ```
-2.  Build the optimized release binary:
-    ```bash
-    cargo build --release
-    ```
+---
 
-## Quality Assurance
+## Prerequisites
 
-The project maintains high code quality and security standards through automated checks.
+The core engine requires a linear algebra backend (OpenBLAS/LAPACK) via `ndarray-linalg` to perform accelerated matrix operations.
 
-### Quality Protection
+**macOS:**
+```bash
+brew install openblas
+```
 
-*   **Git Hooks**: Managed by Lefthook. Automatically runs formatting, linting, and tests on every commit to prevent poor-quality code from entering the history.
-*   **Continuous Integration**: Automated gates on every PR using GitHub Actions.
-*   **Security**: Automated dependency auditing via `cargo-audit`.
-*   **Compliance**: License monitoring through `cargo-deny`.
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt-get update
+sudo apt-get install libopenblas-dev gfortran
+```
 
-### Local Development Commands
+---
 
-*   Run comprehensive quality suite: `make check`
-*   Execute unit and integration tests: `make test`
-*   Perform micro-benchmarking: `make bench`
+## Installation & Usage
 
-## Specifications
+1. **Clone the repository and install toolchains:**
+   ```bash
+   git clone https://github.com/itisrohit/IsoSearch.git
+   cd IsoSearch
+   make setup
+   ```
 
-Detailed technical objectives and architectural details are documented in [docs/goal.md](docs/goal.md).
+2. **Build the optimized engine:**
+   ```bash
+   cargo build --release
+   ```
+
+3. **Run the simulation pipeline:**
+   ```bash
+   cargo run
+   ```
+
+---
+
+## Performance & Benchmarks
+
+IsoSearch is continuously benchmarked against standard "General RAG" flat Euclidean search architectures to validate its computational efficiency. 
+
+* **Preliminary Micro-benchmarks (10,000 simulated documents)**: IsoSearch proved to be **~3.2x faster** than exact Euclidean distance scanning on consumer hardware (Apple M1), returning candidate intersections and traversing the graph in ~294 microseconds. 
+* **Deep Dive**: For full hardware profiling, pipeline mathematics, and theoretical big-O scalability implications, see exactly what we measured in the [Technical Analysis & Benchmarks](docs/technical_analysis.md) report.
+
+To run the benchmarks locally:
+```bash
+make bench
+```
+
+---
+
+## Quality & Development
+
+The project maintains rigorous code quality and security standards through automated enforcement.
+
+* **Git Hooks**: Managed by Lefthook to automatically run formatting, testing, and lint checks.
+* **Security & License Monitoring**: Automated via `cargo-audit` and `cargo-deny`.
+
+To manually run the comprehensive quality suite:
+```bash
+make check
+```
+
+---
+
+## Technical Docs
+
+Detailed technical objectives and stage-by-stage architectural plans are strictly documented in [docs/goal.md](docs/goal.md).

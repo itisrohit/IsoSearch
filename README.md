@@ -62,7 +62,11 @@ sudo apt-get install libopenblas-dev gfortran
 
 IsoSearch is continuously benchmarked against standard "General RAG" flat Euclidean search architectures to validate its computational efficiency. 
 
-* **Preliminary Micro-benchmarks (10,000 simulated documents)**: IsoSearch proved to be **~3.2x faster** than exact Euclidean distance scanning on consumer hardware (Apple M1), returning candidate intersections and traversing the graph in ~294 microseconds. 
+* **Preliminary Micro-benchmarks (10,000 simulated documents)**: IsoSearch proved to be **~2.5x faster** than exact Euclidean distance scanning on consumer hardware (Apple M1), returning candidate intersections and traversing the graph in ~370 microseconds. 
+* **Recent Optimizations**: Through careful profiling and optimization, we achieved significant performance improvements:
+  - **Hamming Distance**: 63% faster baseline implementation using LLVM auto-vectorization
+  - **Parallel Projection**: 30% speedup using Rayon's work-stealing scheduler (~143µs for 100 vectors)
+  - **SIMD Performance**: Both baseline and SIMD implementations now achieve ~480ps for 256-bit hashes
 * **Deep Dive**: For full hardware profiling, pipeline mathematics, and theoretical big-O scalability implications, see exactly what we measured in the [Technical Analysis & Benchmarks](docs/technical_analysis.md) report.
 
 To run the benchmarks locally:

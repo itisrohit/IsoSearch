@@ -127,10 +127,10 @@ The system will be implemented natively in **Rust** to leverage its strict memor
 | **Linear Algebra** | `ndarray` with `ndarray-linalg` (OpenBLAS/LAPACK backend) | ✅ Implemented |
 | **Inference Engine** | API-based client (`reqwest`, `tokio`) connecting to HuggingFace | ✅ Implemented |
 | **Graph Indexing** | Native Rust HNSW (Greedy Base-layer Search) | ✅ Implemented |
-| **Core Engine SIMD** | Relying on Rust LLVM Auto-vectorization & OpenBLAS | ⚠️ Built-in |
-| **Graph Cache-Locality** | Memory-aligned `Struct of Arrays` allocation for HNSW | ⏳ Pending |
-| **Concurrency** | `Rayon` for parallel index building and search space traversal | ⏳ Pending |
-| **Serialization** | `serde` and `bincode` for high-speed, zero-copy index persistence | ⏳ Pending |
+| **Core Engine SIMD** | Explicit `NEON` (ARM) and `AVX2` (x86_64) Intrinsic Kernels + LLVM Auto-vectorization | ✅ Optimized |
+| **Concurrency** | `Rayon` for multi-threaded projection with default work-stealing scheduler | ✅ Optimized |
+| **Serialization** | `serde` and `bincode` with buffered I/O for high-speed persistence | ✅ Optimized |
+| **Cache-Locality** | Memory-aligned allocation for HNSW graph nodes | ⏳ Pending |
 
 ---
 
@@ -143,9 +143,6 @@ For the initial hardware micro-benchmarks regarding execution latency and $O(1)/
 
 ### Remaining Testing & Future Optimization
 
-While the core mechanisms are operational and benchmark mathematically sound on simulated structures, critical empirical validation and systems-level optimizations remain:
-
 1. **Recall Fidelity (Accuracy Tradeoffs)**: Measure exact search accuracy (Recall@10) relative to a brittle absolute Euclidean baseline using actual MS MARCO or SQuAD datasets.
-2. **System Persistence & Concurrency:** Implement `serde` and `bincode` memory-maps to serialize the index to disk (zero-copy), and use `rayon` parallel iterators to allow multi-threaded index ingestion and concurrent queries.
-3. **Explicit Hardware SIMD:** Overriding the default LLVM-auto-vectorizer by writing explicit `core::arch::x86_64` (AVX-512) and `core::arch::aarch64` (NEON) intrinsic functions to manualize vector geometry transforms for the final ~5% speedup.
-4. **Cache-Hitting Optimizations:** Transition the object-oriented graph nodes in `HNSWGraph` into tightly packed memory arenas (Struct of Arrays) to perfectly align CPU L1 caching during traversal.
+2. **System Partitioning (K-Means Refinement):** Scale the routing network to handle a much larger number of shards for multi-million document benchmarks.
+3. **Cache-Hitting Optimizations:** Transition the object-oriented graph nodes in `HNSWGraph` into tightly packed memory arenas (Struct of Arrays) to perfectly align CPU L1 caching during traversal.

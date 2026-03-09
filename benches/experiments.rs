@@ -49,7 +49,7 @@ fn bench_bit_depth_optimization(c: &mut Criterion) {
     group.finish();
 }
 
-/// Compare computing Exact Euclidean vs Hamming Distance
+/// Compare computing Exact Euclidean vs Hamming Distance (Baseline vs SIMD)
 fn bench_distance_computation(c: &mut Criterion) {
     let mut group = c.benchmark_group("distance_computation");
     let dim = 384;
@@ -58,21 +58,98 @@ fn bench_distance_computation(c: &mut Criterion) {
 
     group.bench_function("exact_euclidean_384D", |b| {
         b.iter(|| {
+            // Simple and efficient: Rust/LLVM optimize this well
             let diff = black_box(&vec_a) - black_box(&vec_b);
             let _dist = diff.dot(&diff);
         });
     });
 
-    // 64 bits = 1 u64 word
-    let hash_a = vec![0x1234_5678_90AB_CDEF];
-    let hash_b = vec![0xFEDC_BA09_8765_4321];
+    // 256 bits = 4 u64 words
+    let hash_a = vec![
+        0x1234_5678_90AB_CDEF,
+        0x1234_5678_90AB_CDEF,
+        0x1234_5678_90AB_CDEF,
+        0x1234_5678_90AB_CDEF,
+    ];
+    let hash_b = vec![
+        0xFEDC_BA09_8765_4321,
+        0xFEDC_BA09_8765_4321,
+        0xFEDC_BA09_8765_4321,
+        0xFEDC_BA09_8765_4321,
+    ];
 
-    group.bench_function("quantized_hamming_64bit", |b| {
+    group.bench_function("baseline_hamming_256bit", |b| {
         b.iter(|| {
             let _dist = HNSWGraph::hamming_distance(black_box(&hash_a), black_box(&hash_b));
         });
     });
 
+    group.bench_function("simd_fast_hamming_256bit", |b| {
+        b.iter(|| {
+            let _dist = HNSWGraph::fast_hamming_distance(black_box(&hash_a), black_box(&hash_b));
+        });
+    });
+
+    group.finish();
+}
+
+/// Experiment 6: Concurrency Speedup
+/// Benchmarks parallel search and projection using Rayon.
+fn bench_parallel_operations(c: &mut Criterion) {
+    let mut group = c.benchmark_group("concurrency_parallelism");
+    let dim = 384;
+    let target_dim = 128;
+    let n_queries = 100;
+
+    let queries = vec![Array1::from_elem(dim, 0.5); n_queries];
+    let projector = RandomProjector::new_gaussian(dim, target_dim);
+
+    group.bench_function("sequential_projection_100x", |b| {
+        b.iter(|| {
+            let _res: Vec<_> = queries.iter().map(|q| projector.project(q)).collect();
+        });
+    });
+
+    group.bench_function("parallel_projection_100x", |b| {
+        b.iter(|| {
+            let _res = projector.par_project(black_box(&queries));
+        });
+    });
+
+    group.finish();
+}
+
+/// Experiment 7: Serialization Latency
+/// Benchmarks bincode save/load for a small graph.
+fn bench_serialization_latency(c: &mut Criterion) {
+    let mut group = c.benchmark_group("serialization_persistence");
+    let mut graph = HNSWGraph::new();
+    let id = 1;
+    graph.nodes.insert(
+        id,
+        isosearch::graph::Node {
+            id,
+            hash: vec![0x1234, 0x5678],
+            neighbors: vec![vec![2, 3, 4]],
+        },
+    );
+    graph.entry_point = Some(id);
+
+    let path = "bench_graph.bin";
+
+    group.bench_function("bincode_save_graph", |b| {
+        b.iter(|| {
+            graph.save(black_box(path)).unwrap();
+        });
+    });
+
+    group.bench_function("bincode_load_graph", |b| {
+        b.iter(|| {
+            let _g = HNSWGraph::load(black_box(path)).unwrap();
+        });
+    });
+
+    std::fs::remove_file(path).ok();
     group.finish();
 }
 
@@ -80,6 +157,8 @@ criterion_group!(
     experiments,
     bench_dimensionality_sensitivity,
     bench_bit_depth_optimization,
-    bench_distance_computation
+    bench_distance_computation,
+    bench_parallel_operations,
+    bench_serialization_latency
 );
 criterion_main!(experiments);

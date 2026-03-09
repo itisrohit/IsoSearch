@@ -5,10 +5,12 @@
 
 use crate::types::Embedding;
 use anyhow::{Result, anyhow};
-use ndarray::{Array1, Array2};
-#[allow(unused_imports)]
-use ndarray_linalg::SVD;
+use ndarray::{Array1, Array2, Axis};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::Path;
 
 /// Interface for geometric vector normalization.
 pub trait Normalizer {
@@ -45,22 +47,28 @@ impl WhiteningNormalizer {
         let n_samples = embeddings.len();
         let dim = embeddings[0].len();
 
-        // 1. Compute Mean
-        let mut mean = Array1::zeros(dim);
-        for e in embeddings {
-            mean += e;
-        }
+        // 1. Compute Mean (Parallelized with Rayon)
+        let mean_sum = embeddings.par_iter().cloned().reduce(
+            || Array1::zeros(dim),
+            |mut a, b| {
+                a += &b;
+                a
+            },
+        );
+
         #[allow(clippy::cast_precision_loss)]
         let n_samples_f32 = n_samples as f32;
-        mean /= n_samples_f32;
+        let mean = mean_sum / n_samples_f32;
 
-        // 2. Center Data & Construct Matrix
-        // Row-major matrix of size (n_samples, dim)
+        // 2. Center Data & Construct Matrix (Parallelized with Rayon)
         let mut data_matrix = Array2::<f32>::zeros((n_samples, dim));
-        for (i, e) in embeddings.iter().enumerate() {
-            let centered = e - &mean;
-            data_matrix.row_mut(i).assign(&centered);
-        }
+        data_matrix
+            .axis_iter_mut(Axis(0))
+            .into_par_iter()
+            .enumerate()
+            .for_each(|(i, mut row)| {
+                row.assign(&(&embeddings[i] - &mean));
+            });
 
         let (_, s, vt_opt) = SVDTrait::svd(&data_matrix, false, true)
             .map_err(|e| anyhow!("SVD computation failed: {e}"))?;
@@ -89,6 +97,35 @@ impl WhiteningNormalizer {
             mean,
             transformation,
         })
+    }
+
+    /// Parallelized batch normalization for efficient Phase 4 processing.
+    #[must_use]
+    pub fn par_normalize(&self, vectors: &[Embedding]) -> Vec<Embedding> {
+        vectors.par_iter().map(|v| self.normalize(v)).collect()
+    }
+
+    /// Serialization: Save the normalizer to a file.
+    ///
+    /// # Errors
+    /// Returns an error if serialization or file writing fails.
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let encoded: Vec<u8> = bincode::serialize(self)?;
+        let mut file = File::create(path)?;
+        file.write_all(&encoded)?;
+        Ok(())
+    }
+
+    /// Serialization: Load the normalizer from a file.
+    ///
+    /// # Errors
+    /// Returns an error if file reading or deserialization fails.
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let mut file = File::open(path)?;
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+        let decoded: Self = bincode::deserialize(&buffer)?;
+        Ok(decoded)
     }
 }
 

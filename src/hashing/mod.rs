@@ -9,11 +9,14 @@ use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 
 /// Type alias for a binary hash fingerprint.
-pub type Hash = BitVec<u8, Lsb0>;
+pub type Hash = BitVec<u64, Lsb0>;
 
 /// Interface for locality-sensitive hashing algorithms.
 pub trait LocalitySensitiveHasher {
     /// Generates a binary hash for a given embedding.
+    ///
+    /// This method is marked with `#[inline]` to enable cross-crate
+    /// optimizations and eliminate function call overhead in hot paths.
     fn hash(&self, vector: &Embedding) -> Hash;
 }
 
@@ -52,6 +55,7 @@ impl SimHasher {
 }
 
 impl LocalitySensitiveHasher for SimHasher {
+    #[inline]
     fn hash(&self, vector: &Embedding) -> Hash {
         let projections = self.hyperplanes.dot(vector);
         let mut bits = BitVec::with_capacity(projections.len());
@@ -67,6 +71,9 @@ impl LocalitySensitiveHasher for SimHasher {
 /// Interface for vector quantization.
 pub trait Quantizer {
     /// Compresses a high-dimensional hash into a compact binary representation.
+    ///
+    /// This method is marked with `#[inline]` to enable cross-crate
+    /// optimizations and eliminate function call overhead in hot paths.
     fn quantize(&self, hash: &Hash) -> Vec<u64>;
 }
 
@@ -83,13 +90,9 @@ impl BinaryQuantizer {
 }
 
 impl Quantizer for BinaryQuantizer {
+    #[inline]
     fn quantize(&self, hash: &Hash) -> Vec<u64> {
-        // BitVec already stores data in chunks, but we want
-        // a clean Vec<u64> for our index.
-        hash.as_raw_slice()
-            .iter()
-            .map(|&byte| u64::from(byte))
-            .collect::<Vec<u64>>()
+        hash.as_raw_slice().to_vec()
     }
 }
 

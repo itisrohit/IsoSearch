@@ -5,10 +5,16 @@
 //! via set operations.
 
 use crate::types::ID;
-use std::collections::{HashMap, HashSet};
+use anyhow::Result;
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::Path;
 
 /// An inverted index for LSH buckets.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BucketIndex {
     /// Maps a 64-bit quantized hash to a list of document IDs.
     pub table: HashMap<u64, Vec<ID>>,
@@ -32,20 +38,55 @@ impl BucketIndex {
     /// before precision reranking.
     #[must_use]
     pub fn intersect(&self, hashes: &[u64]) -> Vec<ID> {
-        let mut candidates = HashSet::new();
+        if hashes.is_empty() {
+            return Vec::new();
+        }
+
+        // Fast-path: Single hash lookup
+        if hashes.len() == 1 {
+            return self.table.get(&hashes[0]).cloned().unwrap_or_default();
+        }
+
+        // Optimized Multi-hash intersection (Union)
+        // Memory-aligned collect then sort/dedup is faster than HashSet for these sizes.
+        let mut candidates = Vec::new();
         for &h in hashes {
             if let Some(ids) = self.table.get(&h) {
-                for &id in ids {
-                    candidates.insert(id);
-                }
+                candidates.extend_from_slice(ids);
             }
         }
-        candidates.into_iter().collect()
+
+        candidates.sort_unstable();
+        candidates.dedup();
+        candidates
+    }
+
+    /// Serialization: Save the index to a file.
+    ///
+    /// # Errors
+    /// Returns an error if serialization or file writing fails.
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+        let encoded: Vec<u8> = bincode::serialize(self)?;
+        let mut file = File::create(path)?;
+        file.write_all(&encoded)?;
+        Ok(())
+    }
+
+    /// Serialization: Load the index from a file.
+    ///
+    /// # Errors
+    /// Returns an error if file reading or deserialization fails.
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let mut file = File::open(path)?;
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+        let decoded: Self = bincode::deserialize(&buffer)?;
+        Ok(decoded)
     }
 }
 
 /// A primary storage for full-precision embeddings used for rescoring.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct VectorStore {
     /// Maps document ID to its full embedding vector.
     pub storage: HashMap<ID, crate::types::Embedding>,
@@ -64,13 +105,14 @@ impl VectorStore {
     }
 
     /// Calculates exact Euclidean distances for a set of candidates.
+    /// Parallelized using Rayon for massive performance gains during rescoring.
     ///
     /// # Returns
     /// A sorted list of (ID, distance) from nearest to farthest.
     #[must_use]
     pub fn rescore(&self, query: &crate::types::Embedding, candidates: &[ID]) -> Vec<(ID, f32)> {
         let mut scored: Vec<(ID, f32)> = candidates
-            .iter()
+            .par_iter()
             .filter_map(|id| {
                 self.storage.get(id).map(|vec| {
                     let diff = query - vec;
@@ -80,7 +122,7 @@ impl VectorStore {
             })
             .collect();
 
-        scored.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        scored.par_sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
         scored
     }
 }

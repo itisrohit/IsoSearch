@@ -46,7 +46,7 @@ panic = "abort" # Reduce binary size and overhead
 debug = true # Keep symbols for profiling
 
 [lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 missing_docs = "warn"
 
 [lints.clippy]

@@ -47,7 +47,7 @@ impl Router for KMeansRouter {
             .map(|(i, c)| {
                 let diff = query - c;
                 let dist_sq = diff.dot(&diff);
-                (i as u64, dist_sq)
+                (u64::try_from(i).unwrap_or(u64::MAX), dist_sq)
             })
             .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(id, _)| id)

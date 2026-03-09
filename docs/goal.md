@@ -18,7 +18,7 @@ The primary objective is the development of a **sub-millisecond approximate near
 
 The retrieval process follows a multi-stage optimization pipeline designed to minimize computational complexity at each successive step:
 
-1. **Routing Network/Partitioning** (Search Space Reduction)
+1. **[X] Routing Network/Partitioning** (Search Space Reduction) - *Implemented KMeansRouter*
 2. **Feature Extraction** (Embedding Generation)
 3. **Geometric Normalization** (Mean Centering)
 4. **Spectral Decorrelation** (Whitening)

@@ -127,9 +127,10 @@ The system will be implemented natively in **Rust** to leverage its strict memor
 | **Linear Algebra** | `ndarray` with `ndarray-linalg` (OpenBLAS/LAPACK backend) | ✅ Implemented |
 | **Inference Engine** | API-based client (`reqwest`, `tokio`) connecting to HuggingFace | ✅ Implemented |
 | **Graph Indexing** | Native Rust HNSW (Greedy Base-layer Search) | ✅ Implemented |
-| **Core Engine SIMD** | Explicit `NEON` (ARM) and `AVX2` (x86_64) Intrinsic Kernels + LLVM Auto-vectorization | ✅ Optimized |
-| **Concurrency** | `Rayon` for multi-threaded projection with default work-stealing scheduler | ✅ Optimized |
+| **Core Engine SIMD** | **Muła/Lemire Parallel Lookup** (AVX2/NEON) + LLVM Auto-vectorization | ✅ Optimized |
+| **Concurrency** | `Rayon` for multi-threaded projection and parallel rescoring | ✅ Optimized |
 | **Serialization** | `serde` and `bincode` with buffered I/O for high-speed persistence | ✅ Optimized |
+| **Precision Rescore** | **Zero-Allocation** iterator-fused Euclidean search | ✅ Optimized |
 | **Cache-Locality** | Memory-aligned allocation for HNSW graph nodes | ⏳ Pending |
 
 ---
@@ -151,6 +152,6 @@ We are currently shifting focus from pure systems optimization to **mathematical
 
 ### Remaining Future Roadmap
 
-1.  **System Partitioning (K-Means Refinement):** Scale the routing network to handle a much larger number of shards for multi-million document benchmarks.
-2.  **Cache-Hitting Optimizations (Struct of Arrays):** Transition the object-oriented graph nodes in `HNSWGraph` into a tightly packed memory arena to align CPU L1 caching during traversal.
+1.  **Cache-Hitting Optimizations (Struct of Arrays):** Transition the object-oriented graph nodes in `HNSWGraph` into tight memory-aligned arenas to align CPU L1 caching during traversal.
+2.  **System Partitioning (K-Means Refinement):** Scale the routing network to handle a much larger number of shards for multi-million document benchmarks.
 3.  **Production CLI/API**: Build a lightweight ingestion interface to allow external users to index and search their own document collections.

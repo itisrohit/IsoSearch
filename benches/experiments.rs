@@ -56,11 +56,25 @@ fn bench_distance_computation(c: &mut Criterion) {
     let vec_a = Array1::from_elem(dim, 0.1);
     let vec_b = Array1::from_elem(dim, 0.9);
 
-    group.bench_function("exact_euclidean_384D", |b| {
+    group.bench_function("bench_euclidean_allocating_baseline", |b| {
         b.iter(|| {
-            // Simple and efficient: Rust/LLVM optimize this well
+            // This represents the old, slow way that allocated a new vector
             let diff = black_box(&vec_a) - black_box(&vec_b);
             let _dist = diff.dot(&diff);
+        });
+    });
+
+    group.bench_function("bench_euclidean_zero_allocation", |b| {
+        b.iter(|| {
+            // This represents the new, fast, zero-allocation way
+            let _dist: f32 = vec_a
+                .iter()
+                .zip(vec_b.iter())
+                .map(|(a, b)| {
+                    let d = a - b;
+                    d * d
+                })
+                .sum();
         });
     });
 

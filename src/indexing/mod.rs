@@ -105,7 +105,11 @@ impl VectorStore {
     }
 
     /// Calculates exact Euclidean distances for a set of candidates.
-    /// Parallelized using Rayon for massive performance gains during rescoring.
+    ///
+    /// This implementation is parallelized using Rayon and utilizes a zero-allocation
+    /// iterator pipeline to avoid heap pressure. By fusing the subtraction and
+    /// squaring stages, it allows LLVM to generate optimal SIMD-fused-multiply-add
+    /// patterns.
     ///
     /// # Returns
     /// A sorted list of (ID, distance) from nearest to farthest.
@@ -115,8 +119,16 @@ impl VectorStore {
             .par_iter()
             .filter_map(|id| {
                 self.storage.get(id).map(|vec| {
-                    let diff = query - vec;
-                    let dist_sq = diff.dot(&diff);
+                    // Zero-allocation L2 distance calculation
+                    // This avoids the heap allocation caused by 'query - vec'
+                    let dist_sq = query
+                        .iter()
+                        .zip(vec.iter())
+                        .map(|(q, v)| {
+                            let d = q - v;
+                            d * d
+                        })
+                        .sum();
                     (*id, dist_sq)
                 })
             })

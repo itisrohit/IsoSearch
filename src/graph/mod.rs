@@ -140,6 +140,7 @@ impl HNSWGraph {
     #[target_feature(enable = "avx2")]
     #[inline]
     #[allow(
+        unused_unsafe,
         clippy::cast_ptr_alignment,
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation

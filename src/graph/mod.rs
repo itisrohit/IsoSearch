@@ -123,7 +123,7 @@ impl HNSWGraph {
     /// # Research Citation
     /// Based on: "Faster Population Counts Using AVX2 Instructions" (arXiv:1611.07612).
     /// While the Harley-Seal (CSA) method is optimal for large streams, this lookup
-    /// method provides superior latency for the 64-512 bit hashes used in IsoSearch.
+    /// method provides superior latency for the 64-512 bit hashes used in `IsoSearch`.
     ///
     /// # Performance
     /// - Operates exclusively on 256-bit YMM registers in the hot loop.
@@ -139,7 +139,11 @@ impl HNSWGraph {
     #[cfg(target_arch = "x86_64")]
     #[target_feature(enable = "avx2")]
     #[inline]
-    #[allow(clippy::cast_ptr_alignment)]
+    #[allow(
+        clippy::cast_ptr_alignment,
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation
+    )]
     pub unsafe fn hamming_distance_avx2(a: &[u64], b: &[u64]) -> u32 {
         use std::arch::x86_64::{
             _mm_add_epi64, _mm_extract_epi64, _mm256_add_epi8, _mm256_add_epi64, _mm256_and_si256,
@@ -150,41 +154,48 @@ impl HNSWGraph {
 
         let mut i = 0;
         let len = a.len();
-        let mut total_simd = _mm256_setzero_si256();
+        let mut total_simd = unsafe { _mm256_setzero_si256() };
 
         // 4-bit popcount lookup table
-        let lookup = _mm256_setr_epi8(
-            0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2,
-            3, 3, 4,
-        );
-        let low_mask = _mm256_set1_epi8(0x0f);
+        let lookup = unsafe {
+            _mm256_setr_epi8(
+                0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3,
+                2, 3, 3, 4,
+            )
+        };
+        let low_mask = unsafe { _mm256_set1_epi8(0x0f) };
 
         while i + 3 < len {
-            let va = _mm256_loadu_si256(a.as_ptr().add(i).cast());
-            let vb = _mm256_loadu_si256(b.as_ptr().add(i).cast());
-            let vxor = _mm256_xor_si256(va, vb);
+            unsafe {
+                let va = _mm256_loadu_si256(a.as_ptr().add(i).cast());
+                let vb = _mm256_loadu_si256(b.as_ptr().add(i).cast());
+                let vxor = _mm256_xor_si256(va, vb);
 
-            // Nibble-level SIMD popcount
-            let low = _mm256_and_si256(vxor, low_mask);
-            let high = _mm256_and_si256(_mm256_srli_epi16(vxor, 4), low_mask);
+                // Nibble-level SIMD popcount
+                let low = _mm256_and_si256(vxor, low_mask);
+                let high = _mm256_and_si256(_mm256_srli_epi16(vxor, 4), low_mask);
 
-            let pop_low = _mm256_shuffle_epi8(lookup, low);
-            let pop_high = _mm256_shuffle_epi8(lookup, high);
+                let pop_low = _mm256_shuffle_epi8(lookup, low);
+                let pop_high = _mm256_shuffle_epi8(lookup, high);
 
-            // Sum bytes into 64-bit accumulators
-            let sum_bytes = _mm256_add_epi8(pop_low, pop_high);
-            let sum_u64 = _mm256_sad_epu8(sum_bytes, _mm256_setzero_si256());
-            total_simd = _mm256_add_epi64(total_simd, sum_u64);
+                // Sum bytes into 64-bit accumulators
+                let sum_bytes = _mm256_add_epi8(pop_low, pop_high);
+                let sum_u64 = _mm256_sad_epu8(sum_bytes, _mm256_setzero_si256());
+                total_simd = _mm256_add_epi64(total_simd, sum_u64);
+            }
 
             i += 4;
         }
 
         // Horizontal sum of the four 64-bit accumulators
-        let low_128 = _mm256_castsi256_si128(total_simd);
-        let high_128 = _mm256_extracti128_si256::<1>(total_simd);
-        let sum_128 = _mm_add_epi64(low_128, high_128);
-        let x0 = _mm_extract_epi64::<0>(sum_128) as u64;
-        let x1 = _mm_extract_epi64::<1>(sum_128) as u64;
+        let sum_128 = unsafe {
+            let low_128 = _mm256_castsi256_si128(total_simd);
+            let high_128 = _mm256_extracti128_si256::<1>(total_simd);
+            _mm_add_epi64(low_128, high_128)
+        };
+
+        let x0 = unsafe { _mm_extract_epi64::<0>(sum_128) } as u64;
+        let x1 = unsafe { _mm_extract_epi64::<1>(sum_128) } as u64;
 
         let mut total = (x0 + x1) as u32;
 

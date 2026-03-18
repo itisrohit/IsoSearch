@@ -12,53 +12,40 @@ IsoSearch achieves its latency and computational cost reductions by transforming
 The diagram below separates index construction from query-time retrieval and makes the pruning boundary explicit. In the current pipeline, **Bucket Filtering** is the coarse candidate-generation stage and **HNSW** is the fine-grained graph navigation stage that runs only after the bucket gate has reduced the search space.
 
 ```mermaid
-flowchart TD
+flowchart LR
 
-%% =======================
-%% OFFLINE INDEXING PATH
-%% =======================
-
-subgraph OFFLINE["Offline Indexing Pipeline"]
-A1[Raw Document Embeddings] --> B1[Geometric Normalization\n(Whitening / Poincaré Projection)]
-B1 --> C1[Quantization / Compression]
-C1 --> D1[Bucket Assignment (Hashing / Clustering)]
-D1 --> E1[Store in Buckets]
-
-E1 --> F1[Build HNSW Graph per Bucket]
-F1 --> G1[Persist Index to Disk]
+%% OFFLINE COLUMN
+subgraph OFFLINE [Offline Indexing Pipeline]
+direction TB
+A1[Raw Embeddings]
+A1 --> B1[Geometric Normalization]
+B1 --> B1a[Whitening / Poincare]
+B1a --> C1[Quantization]
+C1 --> D1[Bucket Assignment]
+D1 --> E1[Store Buckets]
+E1 --> F1[HNSW Build]
+F1 --> G1[Index Stored]
 end
 
-%% =======================
-%% ONLINE QUERY PATH
-%% =======================
-
-subgraph ONLINE["Online Query Pipeline"]
-A2[Input Query Vector] --> B2[Same Geometric Normalization\n(Whitening / Poincaré Projection)]
-B2 --> C2[Assign Query to Buckets]
-
-C2 --> D2[Bucket Filtering (Coarse Pruning)]
-D2 -->|Reduced Candidate Set| E2[HNSW Graph Search (Fine Search)]
-
-E2 --> F2[Distance Computation]
-F2 --> G2[Top-K Selection]
-
-G2 --> H2[Return Results]
+%% ONLINE COLUMN
+subgraph ONLINE [Online Query Pipeline]
+direction TB
+A2[Query Vector]
+A2 --> B2[Same Normalization]
+B2 --> B2a[Whitening / Poincare]
+B2a --> C2[Bucket Assignment]
+C2 --> D2[Bucket Filtering]
+D2 --> E2[HNSW Search]
+E2 --> F2[Distance Compute]
+F2 --> G2[Top-K Results]
 end
 
-%% =======================
-%% METRICS / EVALUATION
-%% =======================
+%% CONNECTION BETWEEN COLUMNS
+G1 -.->|Index Used| A2
 
-E2 --> M1[Latency Measurement]
-M1 --> M2[p50 / p95 / p99]
-
-G2 --> M3[Recall@K Evaluation]
-
-%% =======================
-%% CONNECTION (CONCEPTUAL)
-%% =======================
-
-G1 -.->|Index Used By| A2
+%% METRICS (SIDE ATTACHMENTS)
+E2 --> M1[Latency p99]
+G2 --> M2[Recall@K]
 ```
 
 ### Reading the Bucket Filtering -> HNSW Transition

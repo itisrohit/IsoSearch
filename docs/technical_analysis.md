@@ -13,63 +13,52 @@ The diagram below separates index construction from query-time retrieval and mak
 
 ```mermaid
 flowchart TD
-	%% Offline / indexing path
-	subgraph OFFLINE[Index Construction Path]
-		D0[Raw Documents or Embedding Source]
-		D1[Dense Embedding Generation<br/>384D f32 vectors]
-		D2[Normalization<br/>mean centering and whitening]
-		D3[Projection Stack<br/>Poincare + JL projection to reduced dense space]
-		D4[LSH / SimHash<br/>sign projection to binary fingerprint]
-		D5[Binary Quantization<br/>pack fingerprint into u64 words]
-		D6[Bucket Index Build<br/>hash to document ID postings]
-		D7[HNSW Node Build<br/>candidate graph nodes in Hamming space]
-		D8[Vector Store Build<br/>original full-precision embeddings]
 
-		D0 --> D1 --> D2 --> D3 --> D4 --> D5
-		D5 --> D6
-		D5 --> D7
-		D1 --> D8
-	end
+%% =======================
+%% OFFLINE INDEXING PATH
+%% =======================
 
-	%% Online / query path
-	subgraph ONLINE[Query Retrieval Path]
-		Q0[Incoming Query]
-		Q1[Dense Query Embedding<br/>384D f32]
-		Q2[Normalization<br/>same whitening pipeline as index-time]
-		Q3[Projection Stack<br/>same reduced-space transform]
-		Q4[LSH / SimHash<br/>query fingerprint]
-		Q5[Binary Quantization<br/>query hash as u64 words]
-		Q6[Bucket Filtering<br/>union of matching buckets across query hashes]
-		Q7["Pruned Candidate ID Set<br/>coarse recall-oriented gate<br/>roughly O(10^3) rather than O(N)"]
-		Q8[Candidate-Scoped HNSW Search<br/>entry point chosen from pruned set]
-		Q9[SIMD Hamming Distance Expansion<br/>AVX2 or NEON guided neighbor traversal]
-		Q10[Approximate Top-K in Hamming Space]
-		Q11[Exact Rescoring<br/>zero-allocation L2 on full vectors]
-		Q12[Final Ranked Results]
+subgraph OFFLINE["Offline Indexing Pipeline"]
+A1[Raw Document Embeddings] --> B1[Geometric Normalization\n(Whitening / Poincaré Projection)]
+B1 --> C1[Quantization / Compression]
+C1 --> D1[Bucket Assignment (Hashing / Clustering)]
+D1 --> E1[Store in Buckets]
 
-		Q0 --> Q1 --> Q2 --> Q3 --> Q4 --> Q5 --> Q6 --> Q7 --> Q8 --> Q9 --> Q10 --> Q11 --> Q12
-	end
+E1 --> F1[Build HNSW Graph per Bucket]
+F1 --> G1[Persist Index to Disk]
+end
 
-	%% Cross-links between index and query path
-	D6 -. consulted by .-> Q6
-	D7 -. traversed by .-> Q8
-	D8 -. exact vectors for reranking .-> Q11
+%% =======================
+%% ONLINE QUERY PATH
+%% =======================
 
-	%% Pruning semantics
-	Q6 --> G0{Candidate count small enough?}
-	G0 -->|Yes| Q7
-	G0 -->|No| Q7
+subgraph ONLINE["Online Query Pipeline"]
+A2[Input Query Vector] --> B2[Same Geometric Normalization\n(Whitening / Poincaré Projection)]
+B2 --> C2[Assign Query to Buckets]
 
-	%% Visual classes
-	classDef offline fill:#e8f1ff,stroke:#2457a5,color:#102544,stroke-width:1px;
-	classDef online fill:#eef9f0,stroke:#2f7d32,color:#17351a,stroke-width:1px;
-	classDef gate fill:#fff6db,stroke:#b7791f,color:#5a3b00,stroke-width:1px;
-	classDef hot fill:#fdecec,stroke:#b83232,color:#4a1717,stroke-width:1px;
+C2 --> D2[Bucket Filtering (Coarse Pruning)]
+D2 -->|Reduced Candidate Set| E2[HNSW Graph Search (Fine Search)]
 
-	class D0,D1,D2,D3,D4,D5,D6,D7,D8 offline;
-	class Q0,Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q10,Q11,Q12 online;
-	class G0 gate;
-	class Q8,Q9 hot;
+E2 --> F2[Distance Computation]
+F2 --> G2[Top-K Selection]
+
+G2 --> H2[Return Results]
+end
+
+%% =======================
+%% METRICS / EVALUATION
+%% =======================
+
+E2 --> M1[Latency Measurement]
+M1 --> M2[p50 / p95 / p99]
+
+G2 --> M3[Recall@K Evaluation]
+
+%% =======================
+%% CONNECTION (CONCEPTUAL)
+%% =======================
+
+G1 -.->|Index Used By| A2
 ```
 
 ### Reading the Bucket Filtering -> HNSW Transition

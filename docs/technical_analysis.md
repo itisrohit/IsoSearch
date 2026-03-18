@@ -40,7 +40,7 @@ flowchart TD
 		Q4[LSH / SimHash<br/>query fingerprint]
 		Q5[Binary Quantization<br/>query hash as u64 words]
 		Q6[Bucket Filtering<br/>union of matching buckets across query hashes]
-		Q7[Pruned Candidate ID Set<br/>coarse recall-oriented gate<br/>roughly O(10³) rather than O(N)]
+		Q7["Pruned Candidate ID Set<br/>coarse recall-oriented gate<br/>roughly O(10^3) rather than O(N)"]
 		Q8[Candidate-Scoped HNSW Search<br/>entry point chosen from pruned set]
 		Q9[SIMD Hamming Distance Expansion<br/>AVX2 or NEON guided neighbor traversal]
 		Q10[Approximate Top-K in Hamming Space]

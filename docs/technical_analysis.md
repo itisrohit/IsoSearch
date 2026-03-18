@@ -45,6 +45,7 @@ G1 -.->|Index Used| A2
 
 %% METRICS (SIDE ATTACHMENTS)
 E2 --> M1[Latency p99]
+
 G2 --> M2[Recall@K]
 ```
 

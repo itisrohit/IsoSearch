@@ -28,7 +28,7 @@ flowchart TD
 subgraph OFFLINE [Offline Indexing Pipeline]
 direction TB
 A1["Raw Embeddings (384D f32)"]
-A1 --> N1["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Poincare)<br/>(384D -> 128D)"]
+A1 --> N1["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Johnson–Lindenstrauss Projection + Poincaré)<br/>(384D -> 128D)"]
 N1 --> H1["LSH + Binary Quantization<br/>(u64 fingerprint)"]
 H1 --> I1["Bucket Index Build<br/>(Group Similar Items Into Buckets)"]
 I1 --> G1["HNSW Graph Build<br/>(Fast Search Structure)"]
@@ -39,7 +39,7 @@ end
 subgraph ONLINE [Online Query Pipeline]
 direction TB
 A2["Query Vector (384D f32)"]
-A2 --> N2["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Poincare)<br/>(384D -> 128D)"]
+A2 --> N2["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Johnson–Lindenstrauss Projection + Poincaré)<br/>(384D -> 128D)"]
 N2 --> H2["LSH + Binary Quantization<br/>(u64 query fingerprint)"]
 H2 --> F2["Bucket Filtering<br/>(candidate IDs)<br/>(Find Relevant Buckets)"]
 F2 --> G2["Candidate-Scoped HNSW Search<br/>(Hamming space)"]
@@ -48,7 +48,7 @@ R2 --> T2["Top-K Results"]
 end
 
 %% INDEX HANDOFF
-S1 -.->|"Index Used"| A2
+S1 -.->|"Index Used"| F2
 ```
 
 ## 1. Pipeline Breakdown (Simulated 10,000 Document Index)

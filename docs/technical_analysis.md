@@ -30,8 +30,8 @@ direction TB
 A1["Raw Embeddings (384D f32)"]
 A1 --> N1["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Poincare)<br/>(384D -> 128D)"]
 N1 --> H1["LSH + Binary Quantization<br/>(u64 fingerprint)"]
-H1 --> I1["Bucket Index Build"]
-I1 --> G1["HNSW Graph Build"]
+H1 --> I1["Bucket Index Build<br/>(Group Similar Items Into Buckets)"]
+I1 --> G1["HNSW Graph Build<br/>(Fast Search Structure)"]
 G1 --> S1["Stored Search Index"]
 end
 
@@ -41,7 +41,7 @@ direction TB
 A2["Query Vector (384D f32)"]
 A2 --> N2["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Poincare)<br/>(384D -> 128D)"]
 N2 --> H2["LSH + Binary Quantization<br/>(u64 query fingerprint)"]
-H2 --> F2["Bucket Filtering<br/>(candidate IDs)"]
+H2 --> F2["Bucket Filtering<br/>(candidate IDs)<br/>(Find Relevant Buckets)"]
 F2 --> G2["Candidate-Scoped HNSW Search<br/>(Hamming space)"]
 G2 --> R2["Exact L2 Rescore<br/>(full vectors)"]
 R2 --> T2["Top-K Results"]

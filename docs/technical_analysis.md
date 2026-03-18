@@ -24,38 +24,31 @@ All benchmarks were executed locally on consumer hardware to establish a baselin
 ```mermaid
 flowchart TD
 
-%% OFFLINE COLUMN
+%% OFFLINE PIPELINE (INDEX BUILD)
 subgraph OFFLINE [Offline Indexing Pipeline]
 direction TB
-A1[Raw Embeddings]
-A1 --> B1[Geometric Normalization]
-B1 --> B1a[Whitening / Poincare]
-B1a --> C1[Quantization]
-C1 --> D1[Bucket Assignment]
-D1 --> E1[Store Buckets]
-E1 --> F1[HNSW Build]
-F1 --> G1[Index Stored]
+A1["Raw Embeddings (384D f32)"]
+A1 --> N1["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Poincare)<br/>(384D -> 128D)"]
+N1 --> H1["LSH + Binary Quantization<br/>(u64 fingerprint)"]
+H1 --> I1["Bucket Index Build"]
+I1 --> G1["HNSW Graph Build"]
+G1 --> S1["Stored Search Index"]
 end
 
-%% ONLINE COLUMN
+%% ONLINE PIPELINE (QUERY)
 subgraph ONLINE [Online Query Pipeline]
 direction TB
-A2[Query Vector]
-A2 --> B2[Same Normalization]
-B2 --> B2a[Whitening / Poincare]
-B2a --> C2[Bucket Assignment]
-C2 --> D2[Bucket Filtering]
-D2 --> E2[HNSW Search]
-E2 --> F2[Distance Compute]
-F2 --> G2[Top-K Results]
+A2["Query Vector (384D f32)"]
+A2 --> N2["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Poincare)<br/>(384D -> 128D)"]
+N2 --> H2["LSH + Binary Quantization<br/>(u64 query fingerprint)"]
+H2 --> F2["Bucket Filtering<br/>(candidate IDs)"]
+F2 --> G2["Candidate-Scoped HNSW Search<br/>(Hamming space)"]
+G2 --> R2["Exact L2 Rescore<br/>(full vectors)"]
+R2 --> T2["Top-K Results"]
 end
 
-%% CONNECTION BETWEEN COLUMNS
-G1 -.->|Index Used| A2
-
-%% METRICS (SIDE ATTACHMENTS)
-E2 --> M1["Latency p99"]
-G2 --> M2["Recall@K"]
+%% INDEX HANDOFF
+S1 -.->|"Index Used"| A2
 ```
 
 ## 1. Pipeline Breakdown (Simulated 10,000 Document Index)

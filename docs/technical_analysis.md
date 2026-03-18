@@ -7,9 +7,19 @@ IsoSearch achieves its latency and computational cost reductions by transforming
 
 **Latest Update**: Following comprehensive optimization work, we've achieved significant performance improvements across all pipeline stages through careful use of inline hints, SIMD optimizations, and leveraging Rust's powerful auto-vectorization capabilities.
 
-## Architecture Pipeline Diagram
+## Hardware Configuration
+All benchmarks were executed locally on consumer hardware to establish a baseline.
 
-The diagram below separates index construction from query-time retrieval and makes the pruning boundary explicit. In the current pipeline, **Bucket Filtering** is the coarse candidate-generation stage and **HNSW** is the fine-grained graph navigation stage that runs only after the bucket gate has reduced the search space.
+* **Device:** Apple MacBook Pro (13-inch, M1, 2020)
+* **Chip:** Apple M1 Silicon (ARM64)
+* **Cores:** 8 Cores (4 Performance & 4 Efficiency)
+* **Memory:** 8 GB Unified Memory
+* **Language Runtime:** Rust Edition 2024 (optimized with `opt-level = 3`, LTO enabled)
+* **Benchmarking Tool:** `criterion` framework
+
+---
+
+## IsoSearch Architecture Pipeline Diagram
 
 ```mermaid
 flowchart TD
@@ -47,26 +57,6 @@ G1 -.->|Index Used| A2
 E2 --> M1["Latency p99"]
 G2 --> M2["Recall@K"]
 ```
-
-### Reading the Bucket Filtering -> HNSW Transition
-
-- **Bucket Filtering is the pruning gate:** it gathers document IDs from the matching hash buckets and deduplicates them into a candidate pool.
-- **The current pruning logic is recall-first:** the bucket stage uses a union of matching buckets rather than a strict intersection, so it narrows the corpus without prematurely discarding near matches.
-- **HNSW does not reopen the full corpus:** graph traversal starts only after the candidate pool has been formed, so the graph search is bounded by the bucket-pruned subset.
-- **The handoff is intentional:** bucket lookup removes most of the global search cost, while HNSW spends compute only on local neighbor expansion inside that reduced candidate region.
-- **Exact rescoring is the final precision stage:** only the HNSW survivors are pulled back to full-precision vectors for L2 reranking.
-
-## Hardware Configuration
-All benchmarks were executed locally on consumer hardware to establish a baseline.
-
-* **Device:** Apple MacBook Pro (13-inch, M1, 2020)
-* **Chip:** Apple M1 Silicon (ARM64)
-* **Cores:** 8 Cores (4 Performance & 4 Efficiency)
-* **Memory:** 8 GB Unified Memory
-* **Language Runtime:** Rust Edition 2024 (optimized with `opt-level = 3`, LTO enabled)
-* **Benchmarking Tool:** `criterion` framework
-
----
 
 ## 1. Pipeline Breakdown (Simulated 10,000 Document Index)
 

@@ -19,9 +19,41 @@ All benchmarks were executed locally on consumer hardware to establish a baselin
 
 ---
 
+## IsoSearch Architecture Pipeline
+
+```mermaid
+flowchart TD
+
+%% OFFLINE PIPELINE (INDEX BUILD)
+subgraph OFFLINE [Offline Indexing Pipeline]
+direction TB
+A1["Raw Embeddings (384D f32)"]
+A1 --> N1["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Johnson–Lindenstrauss Projection + Poincaré)<br/>(384D -> 128D)"]
+N1 --> H1["LSH + Binary Quantization<br/>(u64 fingerprint)"]
+H1 --> I1["Bucket Index Build<br/>(Group Similar Items Into Buckets)"]
+I1 --> G1["HNSW Graph Build<br/>(Fast Search Structure)"]
+G1 --> S1["Stored Search Index"]
+end
+
+%% ONLINE PIPELINE (QUERY)
+subgraph ONLINE [Online Query Pipeline]
+direction TB
+A2["Query Vector (384D f32)"]
+A2 --> N2["KEY STAGE: GEOMETRIC NORMALIZATION<br/>(Whitening + Johnson–Lindenstrauss Projection + Poincaré)<br/>(384D -> 128D)"]
+N2 --> H2["LSH + Binary Quantization<br/>(u64 query fingerprint)"]
+H2 --> F2["Bucket Filtering<br/>(candidate IDs)<br/>(Find Relevant Buckets)"]
+F2 --> G2["Candidate-Scoped HNSW Search<br/>(Hamming space)"]
+G2 --> R2["Exact L2 Rescore<br/>(full vectors)"]
+R2 --> T2["Top-K Results"]
+end
+
+%% INDEX HANDOFF
+S1 -.->|"Index Used"| F2
+```
+
 ## 1. Pipeline Breakdown (Simulated 10,000 Document Index)
 
-The full retrieval pipeline scales across four primary phases. Measurements below represent the average latency required to process a *single* dense 384-dimensional query vector through the pipeline on a simulated index of 10,000 dummy documents. Note that these are preliminary micro-benchmarks and real-world performance with fully populated data may vary.
+The full retrieval pipeline scales across five primary phases. Measurements below represent the average latency required to process a *single* dense 384-dimensional query vector through the pipeline on a simulated index of 10,000 dummy documents. Note that these are preliminary micro-benchmarks and real-world performance with fully populated data may vary.
 
 ### Phase 1: Math Operations
 * **Operations:** Whitening Normalization + Poincaré Ball Projection + Johnson-Lindenstrauss Projection (384D -> 128D).

@@ -7,6 +7,79 @@ IsoSearch achieves its latency and computational cost reductions by transforming
 
 **Latest Update**: Following comprehensive optimization work, we've achieved significant performance improvements across all pipeline stages through careful use of inline hints, SIMD optimizations, and leveraging Rust's powerful auto-vectorization capabilities.
 
+## Architecture Pipeline Diagram
+
+The diagram below separates index construction from query-time retrieval and makes the pruning boundary explicit. In the current pipeline, **Bucket Filtering** is the coarse candidate-generation stage and **HNSW** is the fine-grained graph navigation stage that runs only after the bucket gate has reduced the search space.
+
+```mermaid
+flowchart TD
+	%% Offline / indexing path
+	subgraph OFFLINE[Index Construction Path]
+		D0[Raw Documents or Embedding Source]
+		D1[Dense Embedding Generation<br/>384D f32 vectors]
+		D2[Normalization<br/>mean centering and whitening]
+		D3[Projection Stack<br/>Poincare + JL projection to reduced dense space]
+		D4[LSH / SimHash<br/>sign projection to binary fingerprint]
+		D5[Binary Quantization<br/>pack fingerprint into u64 words]
+		D6[Bucket Index Build<br/>hash to document ID postings]
+		D7[HNSW Node Build<br/>candidate graph nodes in Hamming space]
+		D8[Vector Store Build<br/>original full-precision embeddings]
+
+		D0 --> D1 --> D2 --> D3 --> D4 --> D5
+		D5 --> D6
+		D5 --> D7
+		D1 --> D8
+	end
+
+	%% Online / query path
+	subgraph ONLINE[Query Retrieval Path]
+		Q0[Incoming Query]
+		Q1[Dense Query Embedding<br/>384D f32]
+		Q2[Normalization<br/>same whitening pipeline as index-time]
+		Q3[Projection Stack<br/>same reduced-space transform]
+		Q4[LSH / SimHash<br/>query fingerprint]
+		Q5[Binary Quantization<br/>query hash as u64 words]
+		Q6[Bucket Filtering<br/>union of matching buckets across query hashes]
+		Q7[Pruned Candidate ID Set<br/>coarse recall-oriented gate<br/>roughly O(10^3) rather than O(N)]
+		Q8[Candidate-Scoped HNSW Search<br/>entry point chosen from pruned set]
+		Q9[SIMD Hamming Distance Expansion<br/>AVX2 or NEON guided neighbor traversal]
+		Q10[Approximate Top-K in Hamming Space]
+		Q11[Exact Rescoring<br/>zero-allocation L2 on full vectors]
+		Q12[Final Ranked Results]
+
+		Q0 --> Q1 --> Q2 --> Q3 --> Q4 --> Q5 --> Q6 --> Q7 --> Q8 --> Q9 --> Q10 --> Q11 --> Q12
+	end
+
+	%% Cross-links between index and query path
+	D6 -. consulted by .-> Q6
+	D7 -. traversed by .-> Q8
+	D8 -. exact vectors for reranking .-> Q11
+
+	%% Pruning semantics
+	Q6 --> G0{Candidate count small enough?}
+	G0 -->|Yes| Q7
+	G0 -->|No| Q7
+
+	%% Visual classes
+	classDef offline fill:#e8f1ff,stroke:#2457a5,color:#102544,stroke-width:1px;
+	classDef online fill:#eef9f0,stroke:#2f7d32,color:#17351a,stroke-width:1px;
+	classDef gate fill:#fff6db,stroke:#b7791f,color:#5a3b00,stroke-width:1px;
+	classDef hot fill:#fdecec,stroke:#b83232,color:#4a1717,stroke-width:1px;
+
+	class D0,D1,D2,D3,D4,D5,D6,D7,D8 offline;
+	class Q0,Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q10,Q11,Q12 online;
+	class G0 gate;
+	class Q8,Q9 hot;
+```
+
+### Reading the Bucket Filtering -> HNSW Transition
+
+- **Bucket Filtering is the pruning gate:** it gathers document IDs from the matching hash buckets and deduplicates them into a candidate pool.
+- **The current pruning logic is recall-first:** the bucket stage uses a union of matching buckets rather than a strict intersection, so it narrows the corpus without prematurely discarding near matches.
+- **HNSW does not reopen the full corpus:** graph traversal starts only after the candidate pool has been formed, so the graph search is bounded by the bucket-pruned subset.
+- **The handoff is intentional:** bucket lookup removes most of the global search cost, while HNSW spends compute only on local neighbor expansion inside that reduced candidate region.
+- **Exact rescoring is the final precision stage:** only the HNSW survivors are pulled back to full-precision vectors for L2 reranking.
+
 ## Hardware Configuration
 All benchmarks were executed locally on consumer hardware to establish a baseline.
 
@@ -21,7 +94,7 @@ All benchmarks were executed locally on consumer hardware to establish a baselin
 
 ## 1. Pipeline Breakdown (Simulated 10,000 Document Index)
 
-The full retrieval pipeline scales across four primary phases. Measurements below represent the average latency required to process a *single* dense 384-dimensional query vector through the pipeline on a simulated index of 10,000 dummy documents. Note that these are preliminary micro-benchmarks and real-world performance with fully populated data may vary.
+The full retrieval pipeline scales across five primary phases. Measurements below represent the average latency required to process a *single* dense 384-dimensional query vector through the pipeline on a simulated index of 10,000 dummy documents. Note that these are preliminary micro-benchmarks and real-world performance with fully populated data may vary.
 
 ### Phase 1: Math Operations
 * **Operations:** Whitening Normalization + Poincaré Ball Projection + Johnson-Lindenstrauss Projection (384D -> 128D).

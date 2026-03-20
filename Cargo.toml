@@ -10,7 +10,7 @@ license = "MIT"
 [dependencies]
 # Core math and vector operations
 ndarray = { version = "0.16", features = ["serde", "rayon", "blas"] }
-ndarray-linalg = { version = "0.17", features = ["openblas-system"] }
+ndarray-linalg = { version = "0.17", default-features = false }
 rayon = "1.10"
 bitvec = { version = "1.0", features = ["serde"] } # For LSH hash storage
 
@@ -37,6 +37,12 @@ rand_distr = "0.4"
 [dev-dependencies]
 proptest = "1.5" # Property-based testing for LSH/HNSW
 criterion = "0.5" # Micro-benchmarking for sub-ms targets
+
+[features]
+default = ["openblas-system"]
+openblas-system = ["ndarray-linalg/openblas-system"]
+openblas-static = ["ndarray-linalg/openblas-static"]
+intel-mkl-static = ["ndarray-linalg/intel-mkl-static"]
 
 [profile.release]
 opt-level = 3

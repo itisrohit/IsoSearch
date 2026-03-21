@@ -84,27 +84,6 @@ sudo apt-get install libopenblas-dev gfortran
 
 ---
 
-## Installation & Usage
-
-1. **Clone the repository and install toolchains:**
-```bash
-   git clone https://github.com/itisrohit/IsoSearch.git
-   cd IsoSearch
-   make setup
-```
-
-2. **Build the optimized engine:**
-```bash
-   cargo build --release
-```
-
-3. **Run the simulation pipeline:**
-```bash
-   cargo run
-```
-
----
-
 ## Performance & Benchmarks
 
 IsoSearch is continuously benchmarked against standard "General RAG" flat Euclidean search architectures to validate its computational efficiency. 
